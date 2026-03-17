@@ -1,7 +1,7 @@
 """
 download_data.py
 Pulls the CMS Medicare Physician & Other Practitioners (MUP) dataset.
-Latest available: 2022 service year (released 2024).
+Latest available: 2023 service year (released December 2025).
 Source: https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners
 """
 
@@ -18,16 +18,16 @@ load_dotenv()
 RAW_DIR = Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-# CMS open data API — MUP by Provider 2022 (most recent public release)
+# CMS open data API — MUP 2023 service year (most recent public release)
 # Full dataset download link from data.cms.gov
 DATASETS = {
-    "mup_phy_r24_p05_v10_dy22_prvdr": {
-        "url": "https://data.cms.gov/sites/default/files/2024-06/ef35c5c2-a282-4e28-92fe-f28f56f71ec1/MUP_PHY_R24_P05_V10_DY22_PRVDR.csv",
-        "description": "MUP Provider-level 2022 (~10M rows)",
+    "mup_phy_r25_p05_v20_d23_prov": {
+        "url": "https://data.cms.gov/sites/default/files/2025-04/22edfd1e-d17a-4478-ad6b-92cac2a5a3c4/MUP_PHY_R25_P05_V20_D23_Prov.csv",
+        "description": "MUP by Provider — 2023 service year (released Dec 2025)",
     },
-    "mup_phy_r24_p05_v10_dy22_npi_svc": {
-        "url": "https://data.cms.gov/sites/default/files/2024-06/6e536af0-b76e-4f91-a2a6-fcfe2e6f5b9a/MUP_PHY_R24_P05_V10_DY22_NPI_SVC.csv",
-        "description": "MUP NPI+Service-level 2022 (~9M rows)",
+    "mup_phy_r25_p05_v20_d23_prov_svc": {
+        "url": "https://data.cms.gov/sites/default/files/2025-04/MUP_PHY_R25_P05_V20_D23_Prov_Svc.csv",
+        "description": "MUP by Provider + Service — 2023 service year (released Dec 2025)",
     },
 }
 
@@ -65,7 +65,7 @@ def download_file(url: str, dest: Path, description: str) -> None:
 
 def main():
     print("=" * 60)
-    print("CMS Medicare MUP 2022 — Data Download")
+    print("CMS Medicare MUP 2023 — Data Download")
     print("=" * 60 + "\n")
 
     for name, meta in DATASETS.items():
