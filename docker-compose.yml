@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: medicare_gx_db
+    environment:
+      POSTGRES_USER: gx_user
+      POSTGRES_PASSWORD: gx_password
+      POSTGRES_DB: medicare_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
