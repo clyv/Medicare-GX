@@ -1,0 +1,84 @@
+name: Data Quality Validation
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Runs every Monday at 9am UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: GX Validation — Pandas + PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gx_user
+          POSTGRES_PASSWORD: gx_password
+          POSTGRES_DB: medicare_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_CONN: postgresql+psycopg2://gx_user:gx_password@localhost:5432/medicare_db
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Initialize GX context
+        run: |
+          python -c "import great_expectations as gx; gx.get_context(mode='file')"
+
+      - name: Download CMS data (cached)
+        uses: actions/cache@v4
+        id: cache-data
+        with:
+          path: data/raw
+          key: cms-mup-2023-v1
+
+      - name: Pull data if not cached
+        if: steps.cache-data.outputs.cache-hit != 'true'
+        run: python pipelines/download_data.py
+
+      - name: Build expectation suites
+        run: python pipelines/build_suites.py
+
+      - name: Run Pandas validation
+        run: python pipelines/validate_pandas.py
+
+      - name: Load data to PostgreSQL
+        run: python pipelines/load_to_postgres.py
+
+      - name: Run PostgreSQL validation
+        run: python pipelines/validate_postgres.py
+
+      - name: Upload Data Docs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-docs
+          path: gx/uncommitted/data_docs/local_site/
+          retention-days: 30
