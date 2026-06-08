@@ -58,6 +58,10 @@ def run_pandas_validation():
     )
 
     # ── Checkpoint ─────────────────────────────────────────────────────────
+    try:
+        context.checkpoints.delete(CHECKPOINT_NAME)
+    except Exception:
+        pass
     checkpoint = context.checkpoints.add(
         gx.Checkpoint(
             name=CHECKPOINT_NAME,
