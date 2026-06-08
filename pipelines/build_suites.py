@@ -104,7 +104,6 @@ def build_mup_provider_suite() -> ExpectationSuite:
     # ── 8. Uniqueness: NPI should be unique at provider level ─────────────
     suite.add_expectation(gxe.ExpectColumnValuesToBeUnique(column="Rndrng_NPI"))
 
-    context.suites.update(suite)
     print(f"✓ Suite '{suite_name}' saved with {len(suite.expectations)} expectations.")
     return suite
 
