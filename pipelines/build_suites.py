@@ -15,7 +15,7 @@ context = gx.get_context(mode="file")
 
 def add_expectation(suite: ExpectationSuite, exp_type: str, kwargs: dict):
     suite.add_expectation(
-        ExpectationConfiguration(expectation_type=exp_type, kwargs=kwargs)
+        ExpectationConfiguration(type=exp_type, kwargs=kwargs)
     )
 
 
