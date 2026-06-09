@@ -22,12 +22,6 @@ TABLE_NAME = "mup_provider"
 CHUNK_SIZE = 50_000
 
 
-def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
-    """Lowercase column names and replace spaces with underscores."""
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-    return df
-
-
 def load():
     engine = create_engine(CONN)
 
@@ -58,8 +52,6 @@ def load():
     )
 
     for i, chunk in enumerate(tqdm(reader, desc="Chunks loaded", unit="chunk")):
-        chunk = clean_column_names(chunk)
-
         chunk.to_sql(
             name=TABLE_NAME,
             con=engine,
@@ -75,7 +67,7 @@ def load():
     # Add index on NPI for query performance
     with engine.connect() as conn:
         conn.execute(
-            text(f"CREATE INDEX IF NOT EXISTS idx_npi ON {TABLE_NAME} (rndrng_npi)")
+            text(f'CREATE INDEX IF NOT EXISTS idx_npi ON {TABLE_NAME} ("Rndrng_NPI")')
         )
         conn.commit()
     print("[INDEX] Created index on rndrng_npi.")
