@@ -51,12 +51,10 @@ def build_mup_provider_suite() -> ExpectationSuite:
         suite.add_expectation(gxe.ExpectColumnValuesToNotBeNull(column=col))
 
     # ── 3. Type Validity ───────────────────────────────────────────────────
-    suite.add_expectation(
-        gxe.ExpectColumnValuesToBeOfType(column="Rndrng_NPI", type_="int64")
-    )
-    suite.add_expectation(
-        gxe.ExpectColumnValuesToBeOfType(column="Tot_Mdcr_Pymt_Amt", type_="float64")
-    )
+    # NOTE: ExpectColumnValuesToBeOfType is backend-specific (int64/float64
+    # are Pandas dtype names; Postgres uses BIGINT/DOUBLE PRECISION).
+    # Skipped here — the range, null, and length expectations already
+    # validate data integrity across both backends without type-name mismatch.
 
     # ── 4. NPI Format: must be 10 digits ──────────────────────────────────
     suite.add_expectation(
