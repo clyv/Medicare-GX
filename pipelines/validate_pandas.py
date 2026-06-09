@@ -85,10 +85,10 @@ def run_pandas_validation():
     print("=" * 60)
 
     for vr in results.run_results.values():
-        for result in vr["validation_result"]["results"]:
-            status = "✓" if result["success"] else "✗"
-            exp = result["expectation_config"]["expectation_type"]
-            col = result["expectation_config"]["kwargs"].get("column", "TABLE")
+        for result in vr.results:
+            status = "✓" if result.success else "✗"
+            exp = result.expectation_config.type
+            col = result.expectation_config.kwargs.get("column", "TABLE")
             print(f"  {status}  {exp} | {col}")
 
     # ── Data Docs ──────────────────────────────────────────────────────────
