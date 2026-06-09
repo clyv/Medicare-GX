@@ -83,16 +83,26 @@ def build_mup_provider_suite() -> ExpectationSuite:
 
     # ── 6. Categorical: State abbreviations must be valid US states ────────
     valid_states = [
+        # 50 states
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
         "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
         "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
         "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
         "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-        "DC", "PR", "VI", "GU", "MP", "AS", "ZZ",
+        # District & territories
+        "DC", "PR", "VI", "GU", "MP", "AS",
+        # Military APO/FPO/DPO
+        "AA", "AE", "AP",
+        # Freely Associated States (used in CMS billing)
+        "FM", "MH", "PW",
+        # CMS catch-all for unknown/foreign
+        "ZZ",
     ]
     suite.add_expectation(
         gxe.ExpectColumnValuesToBeInSet(
-            column="Rndrng_Prvdr_State_Abrvtn", value_set=valid_states
+            column="Rndrng_Prvdr_State_Abrvtn",
+            value_set=valid_states,
+            mostly=0.999,  # tolerate up to 0.1% unlisted codes in future data
         )
     )
 

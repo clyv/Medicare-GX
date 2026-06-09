@@ -35,10 +35,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -53,7 +53,7 @@ jobs:
           python -c "import great_expectations as gx; gx.get_context(mode='file')"
 
       - name: Download CMS data (cached)
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         id: cache-data
         with:
           path: data/raw
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload Data Docs as artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: data-docs
           path: gx/uncommitted/data_docs/local_site/
