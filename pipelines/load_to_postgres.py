@@ -51,7 +51,10 @@ def load():
         DATA_FILE,
         chunksize=CHUNK_SIZE,
         low_memory=False,
-        dtype={"Rndrng_NPI": str},  # keep NPI as string to preserve leading zeros
+        dtype={
+            "Rndrng_NPI": str,           # preserve leading zeros
+            "Rndrng_Prvdr_Zip5": str,    # Canadian postal codes (e.g. K1H8) are alphanumeric
+        },
     )
 
     for i, chunk in enumerate(tqdm(reader, desc="Chunks loaded", unit="chunk")):
