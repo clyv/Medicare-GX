@@ -137,7 +137,8 @@ env.bak/
 venv.bak/
 
 # Project-specific ignores
-gx/uncommitted/
+# GX context is rebuilt by build_suites.py on every run (and in CI)
+gx/
 data/raw/
 
 # Spyder project settings
