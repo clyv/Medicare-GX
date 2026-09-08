@@ -108,4 +108,6 @@ def run_postgres_validation():
 
 
 if __name__ == "__main__":
+    # ✓/✗ in the output would blow up a cp1252 Windows console otherwise
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     run_postgres_validation()

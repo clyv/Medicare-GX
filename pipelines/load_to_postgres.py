@@ -5,6 +5,8 @@ Run docker-compose up -d first.
 """
 
 import os
+import sys
+
 import pandas as pd
 from sqlalchemy import create_engine, text
 from pathlib import Path
@@ -74,4 +76,6 @@ def load():
 
 
 if __name__ == "__main__":
+    # the arrow in the progress output would blow up a cp1252 Windows console
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     load()

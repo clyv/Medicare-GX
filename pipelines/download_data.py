@@ -4,6 +4,8 @@ Pulls CMS Medicare Physician & Other Practitioners (MUP) — 2023 service year.
 Most recent public release (Dec 2025). Source: data.cms.gov
 """
 
+import sys
+
 import requests
 from tqdm import tqdm
 from pathlib import Path
@@ -55,4 +57,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # ✓ in the output would blow up a cp1252 Windows console otherwise
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     main()
