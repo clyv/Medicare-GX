@@ -1,7 +1,12 @@
-great_expectations[sqlalchemy]>=1.0,<2.0
+# Pinned: great_expectations 1.20.0 regressed expect_column_values_to_be_unique
+# on SQLAlchemy backends with mixed-case column names — it raises
+# KeyError: 'Rndrng_NPI' inside _build_duplicate_rows_source, which broke the
+# Postgres leg of CI on 2026-08-10. 1.19.1 is the last known-good release.
+great_expectations[sqlalchemy]==1.19.1
 pandas>=2.0
 psycopg2-binary>=2.9
 python-dotenv>=1.0
 requests>=2.31
 tqdm>=4.66
 sqlalchemy>=2.0
+pytest>=8.0
