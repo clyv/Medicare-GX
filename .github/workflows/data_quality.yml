@@ -48,6 +48,9 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run contract unit tests
+        run: pytest tests/ -v
+
       - name: Initialize GX context
         run: |
           python -c "import great_expectations as gx; gx.get_context(mode='file')"
