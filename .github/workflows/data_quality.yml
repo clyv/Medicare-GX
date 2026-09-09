@@ -10,29 +10,18 @@ on:
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: data-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
-    name: GX Validation — Pandas + PostgreSQL
+  # ── Fast feedback: everything that needs no data ────────────────────────
+  contract:
+    name: Contract tests & ODCS
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: gx_user
-          POSTGRES_PASSWORD: gx_password
-          POSTGRES_DB: medicare_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      POSTGRES_CONN: postgresql+psycopg2://gx_user:gx_password@localhost:5432/medicare_db
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
@@ -51,9 +40,65 @@ jobs:
       - name: Run contract unit tests
         run: pytest tests/ -v
 
-      - name: Initialize GX context
+      - name: Check the published ODCS document is in step with the contract
+        run: python pipelines/export_odcs.py --check
+
+      - name: Validate the ODCS document against the standard
         run: |
-          python -c "import great_expectations as gx; gx.get_context(mode='file')"
+          pip install "datacontract-cli>=1.2"
+          datacontract lint contracts/mup_provider.odcs.yaml
+
+  # ── The real thing: one contract, three execution environments ──────────
+  validate:
+    name: GX Validation — Pandas + PostgreSQL + Spark
+    runs-on: ubuntu-latest
+    needs: contract
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gx_user
+          POSTGRES_PASSWORD: gx_password
+          POSTGRES_DB: medicare_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_CONN: postgresql+psycopg2://gx_user:gx_password@localhost:5432/medicare_db
+      # Optional: set this repository secret to get a Slack ping when the
+      # blocking tier fails. Absent, the notification action is not attached.
+      GX_SLACK_WEBHOOK_URL: ${{ secrets.GX_SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Set up Java 17
+        # Spark needs a JVM. Temurin 17 is the version Spark 3.5 is built for.
+        uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-spark.txt
+
+      - name: Initialize GX context
+        run: python -c "import great_expectations as gx; gx.get_context(mode='file')"
 
       - name: Download CMS data (cached)
         uses: actions/cache@v4.2.3
@@ -69,14 +114,17 @@ jobs:
       - name: Build expectation suites
         run: python pipelines/build_suites.py
 
-      - name: Run Pandas validation
+      - name: Validate — Pandas
         run: python pipelines/validate_pandas.py
 
       - name: Load data to PostgreSQL
         run: python pipelines/load_to_postgres.py
 
-      - name: Run PostgreSQL validation
+      - name: Validate — PostgreSQL
         run: python pipelines/validate_postgres.py
+
+      - name: Validate — Spark
+        run: python pipelines/validate_spark.py
 
       - name: Upload Data Docs as artifact
         if: always()
@@ -85,3 +133,31 @@ jobs:
           name: data-docs
           path: gx/uncommitted/data_docs/local_site/
           retention-days: 30
+
+      - name: Package Data Docs for Pages
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3.0.1
+        with:
+          path: gx/uncommitted/data_docs/local_site/
+
+  # ── Publish the quality report so it is readable without a download ─────
+  publish-docs:
+    name: Publish Data Docs
+    runs-on: ubuntu-latest
+    needs: validate
+    # Publish the report even when the contract broke — a failing run is
+    # exactly the one worth reading.
+    if: always() && github.ref == 'refs/heads/main'
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5

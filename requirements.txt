@@ -10,3 +10,4 @@ requests>=2.31
 tqdm>=4.66
 sqlalchemy>=2.0
 pytest>=8.0
+pyyaml>=6.0

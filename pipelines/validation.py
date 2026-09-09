@@ -10,10 +10,12 @@ reported and published to Data Docs but never fail the build.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import great_expectations as gx
+from great_expectations.checkpoint import SlackNotificationAction
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -47,6 +49,27 @@ PORTABLE_TIERS = ((BLOCKING, BLOCKING_SUITE_NAME), (ADVISORY, ADVISORY_SUITE_NAM
 PANDAS_TIERS = PORTABLE_TIERS + ((PROFILING, PROFILING_SUITE_NAME),)
 
 
+def _actions(tier: str) -> list:
+    """Alert on a broken contract, when a webhook is configured.
+
+    Only the blocking tier notifies. An advisory rule that has not yet been
+    calibrated is not worth waking anyone for, and a channel that pings on
+    every uncalibrated threshold is a channel people mute.
+    """
+    webhook = os.getenv("GX_SLACK_WEBHOOK_URL", "").strip()
+    if not webhook or tier != BLOCKING:
+        return []
+
+    return [
+        SlackNotificationAction(
+            name="notify_on_broken_contract",
+            slack_webhook=webhook,
+            notify_on="failure",
+            show_failed_expectations=True,
+        )
+    ]
+
+
 def _run_tier(
     context, batch_definition, prefix: str, tier: str, suite_name: str, batch_parameters
 ):
@@ -72,6 +95,7 @@ def _run_tier(
             name=checkpoint_name,
             validation_definitions=[validation_def],
             result_format=_RESULT_FORMATS[tier],
+            actions=_actions(tier),
         )
     )
     # Dataframe assets (Spark, in-memory Pandas) are handed their frame at run

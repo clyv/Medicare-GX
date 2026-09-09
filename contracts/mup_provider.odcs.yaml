@@ -1,0 +1,2015 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: cms-mup-provider-2023
+name: CMS Medicare Physician & Other Practitioners — by Provider
+version: 1.0.0
+status: active
+domain: healthcare
+dataProduct: medicare-mup-provider
+tenant: Medicare-GX
+description:
+  purpose: Enforce one data contract across three execution environments (Pandas, PostgreSQL and Spark)
+    on the CMS Medicare Physician & Other Practitioners by-provider extract.
+  usage: 'Provider-level utilisation and payment analysis: one row per rendering NPI per service year.'
+  limitations: CMS redacts any data element representing fewer than 11 beneficiaries, and top-codes chronic
+    condition percentages at 75. Absent and capped values are expected, not defects. Figures cover Medicare
+    fee-for-service Part B only.
+authoritativeDefinitions:
+- type: businessDefinition
+  url: https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners/medicare-physician-other-practitioners-by-provider
+  description: CMS dataset landing page.
+- type: implementation
+  url: https://github.com/clyv/Medicare-GX/blob/main/pipelines/contract.py
+  description: Executable source of this document.
+servers:
+- server: local-postgres
+  type: postgres
+  host: localhost
+  port: 5432
+  database: medicare_db
+  schema: public
+  description: Docker Postgres used by the SQL validation leg.
+- server: cms-csv
+  type: local
+  path: data/raw/mup_phy_r25_p05_v20_d23_prov.csv
+  format: csv
+  description: Raw CMS extract, validated on Pandas and Spark.
+schema:
+- name: mup_provider
+  physicalName: mup_provider
+  physicalType: table
+  logicalType: object
+  businessName: Medicare provider utilisation and payment summary
+  description: One row per rendering NPI for the 2023 service year.
+  dataGranularityDescription: One row per Rndrng_NPI.
+  tags:
+  - healthcare
+  - medicare
+  - cms
+  - public
+  quality:
+  - name: expect_table_columns_to_match_set
+    description: Catches upstream column additions and removals that per-column existence checks cannot
+      see.
+    dimension: conformity
+    severity: warning
+    type: custom
+    engine: greatExpectations
+    implementation:
+      expectation: expect_table_columns_to_match_set
+      kwargs:
+        column_set:
+        - Rndrng_NPI
+        - Rndrng_Prvdr_Last_Org_Name
+        - Rndrng_Prvdr_First_Name
+        - Rndrng_Prvdr_MI
+        - Rndrng_Prvdr_Crdntls
+        - Rndrng_Prvdr_Ent_Cd
+        - Rndrng_Prvdr_St1
+        - Rndrng_Prvdr_St2
+        - Rndrng_Prvdr_City
+        - Rndrng_Prvdr_State_Abrvtn
+        - Rndrng_Prvdr_State_FIPS
+        - Rndrng_Prvdr_Zip5
+        - Rndrng_Prvdr_RUCA
+        - Rndrng_Prvdr_RUCA_Desc
+        - Rndrng_Prvdr_Cntry
+        - Rndrng_Prvdr_Type
+        - Rndrng_Prvdr_Mdcr_Prtcptg_Ind
+        - Tot_HCPCS_Cds
+        - Tot_Benes
+        - Tot_Srvcs
+        - Tot_Sbmtd_Chrg
+        - Tot_Mdcr_Alowd_Amt
+        - Tot_Mdcr_Pymt_Amt
+        - Tot_Mdcr_Stdzd_Amt
+        - Drug_Sprsn_Ind
+        - Drug_Tot_HCPCS_Cds
+        - Drug_Tot_Benes
+        - Drug_Tot_Srvcs
+        - Drug_Sbmtd_Chrg
+        - Drug_Mdcr_Alowd_Amt
+        - Drug_Mdcr_Pymt_Amt
+        - Drug_Mdcr_Stdzd_Amt
+        - Med_Sprsn_Ind
+        - Med_Tot_HCPCS_Cds
+        - Med_Tot_Benes
+        - Med_Tot_Srvcs
+        - Med_Sbmtd_Chrg
+        - Med_Mdcr_Alowd_Amt
+        - Med_Mdcr_Pymt_Amt
+        - Med_Mdcr_Stdzd_Amt
+        - Bene_Avg_Age
+        - Bene_Age_LT_65_Cnt
+        - Bene_Age_65_74_Cnt
+        - Bene_Age_75_84_Cnt
+        - Bene_Age_GT_84_Cnt
+        - Bene_Feml_Cnt
+        - Bene_Male_Cnt
+        - Bene_Race_Wht_Cnt
+        - Bene_Race_Black_Cnt
+        - Bene_Race_API_Cnt
+        - Bene_Race_Hspnc_Cnt
+        - Bene_Race_NatInd_Cnt
+        - Bene_Race_Othr_Cnt
+        - Bene_Dual_Cnt
+        - Bene_Ndual_Cnt
+        - Bene_Avg_Risk_Scre
+        - Bene_CC_BH_ADHD_OthCD_V1_Pct
+        - Bene_CC_BH_Alcohol_Drug_V1_Pct
+        - Bene_CC_BH_Tobacco_V1_Pct
+        - Bene_CC_BH_Alz_NonAlzdem_V2_Pct
+        - Bene_CC_BH_Anxiety_V1_Pct
+        - Bene_CC_BH_Bipolar_V1_Pct
+        - Bene_CC_BH_Mood_V2_Pct
+        - Bene_CC_BH_Depress_V1_Pct
+        - Bene_CC_BH_PD_V1_Pct
+        - Bene_CC_BH_PTSD_V1_Pct
+        - Bene_CC_BH_Schizo_OthPsy_V1_Pct
+        - Bene_CC_PH_Asthma_V2_Pct
+        - Bene_CC_PH_Afib_V2_Pct
+        - Bene_CC_PH_Cancer6_V2_Pct
+        - Bene_CC_PH_CKD_V2_Pct
+        - Bene_CC_PH_COPD_V2_Pct
+        - Bene_CC_PH_Diabetes_V2_Pct
+        - Bene_CC_PH_HF_NonIHD_V2_Pct
+        - Bene_CC_PH_Hyperlipidemia_V2_Pct
+        - Bene_CC_PH_Hypertension_V2_Pct
+        - Bene_CC_PH_IschemicHeart_V2_Pct
+        - Bene_CC_PH_Osteoporosis_V2_Pct
+        - Bene_CC_PH_Parkinson_V2_Pct
+        - Bene_CC_PH_Arthritis_V2_Pct
+        - Bene_CC_PH_Stroke_TIA_V2_Pct
+  - name: expect_table_column_count_to_be_between
+    description: Coarse guard on schema drift between CMS releases.
+    dimension: conformity
+    severity: warning
+    type: custom
+    engine: greatExpectations
+    implementation:
+      expectation: expect_table_column_count_to_be_between
+      kwargs:
+        min_value: 70.0
+        max_value: 95.0
+  - name: expect_table_row_count_to_be_between
+    description: Roughly 1.26M providers per service year.
+    dimension: coverage
+    severity: error
+    type: library
+    metric: rowCount
+    mustBeBetween:
+    - 1000000
+    - 15000000
+  properties:
+  - name: Rndrng_NPI
+    logicalType: string
+    physicalType: text
+    required: true
+    primaryKey: true
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_NPI
+    - name: expect_column_values_to_not_be_null
+      description: Never null in any released MUP file.
+      dimension: completeness
+      severity: error
+      type: library
+      metric: nullValues
+      mustBe: 0
+    - name: expect_column_value_lengths_to_equal
+      description: NPI is a fixed 10-character identifier.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_value_lengths_to_equal
+        kwargs:
+          column: Rndrng_NPI
+          value: 10.0
+    - name: expect_column_values_to_match_regex
+      description: Length alone would accept 10 letters.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_match_regex
+        kwargs:
+          column: Rndrng_NPI
+          regex: ^\d{10}$
+    - name: expect_column_values_to_be_valid_npi
+      description: NPI check digit, per the Luhn formula CMS specifies over the 80840 prefix. No format
+        rule can catch a bad check digit.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_valid_npi
+        kwargs:
+          column: Rndrng_NPI
+    - name: expect_column_values_to_be_unique
+      description: The by-provider file holds one row per NPI.
+      dimension: uniqueness
+      severity: error
+      type: library
+      metric: duplicateValues
+      mustBe: 0
+    - name: expect_column_proportion_of_unique_values_to_be_between
+      description: States the one-row-per-NPI rule as a proportion.
+      dimension: uniqueness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_unique_values_to_be_between
+        kwargs:
+          column: Rndrng_NPI
+          min_value: 1.0
+          max_value: 1.0
+  - name: Rndrng_Prvdr_Last_Org_Name
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_Prvdr_Last_Org_Name
+  - name: Rndrng_Prvdr_First_Name
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_Prvdr_First_Name
+  - name: Rndrng_Prvdr_MI
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_Crdntls
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_Ent_Cd
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_in_set
+      description: I = individual practitioner, O = organisation.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_in_set
+        kwargs:
+          column: Rndrng_Prvdr_Ent_Cd
+          value_set:
+          - I
+          - O
+  - name: Rndrng_Prvdr_St1
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_St2
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_City
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_Prvdr_City
+  - name: Rndrng_Prvdr_State_Abrvtn
+    logicalType: string
+    physicalType: text
+    required: true
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_Prvdr_State_Abrvtn
+    - name: expect_column_values_to_not_be_null
+      description: Never null in any released MUP file.
+      dimension: completeness
+      severity: error
+      type: library
+      metric: nullValues
+      mustBe: 0
+    - name: expect_column_values_to_be_in_set
+      description: 'CMS state codes: 50 states, DC, territories, military APO/FPO, Freely Associated States,
+        and ZZ for foreign addresses.'
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_in_set
+        kwargs:
+          column: Rndrng_Prvdr_State_Abrvtn
+          mostly: 0.999
+          value_set:
+          - AL
+          - AK
+          - AZ
+          - AR
+          - CA
+          - CO
+          - CT
+          - DE
+          - FL
+          - GA
+          - HI
+          - ID
+          - IL
+          - IN
+          - IA
+          - KS
+          - KY
+          - LA
+          - ME
+          - MD
+          - MA
+          - MI
+          - MN
+          - MS
+          - MO
+          - MT
+          - NE
+          - NV
+          - NH
+          - NJ
+          - NM
+          - NY
+          - NC
+          - ND
+          - OH
+          - OK
+          - OR
+          - PA
+          - RI
+          - SC
+          - SD
+          - TN
+          - TX
+          - UT
+          - VT
+          - VA
+          - WA
+          - WV
+          - WI
+          - WY
+          - DC
+          - PR
+          - VI
+          - GU
+          - MP
+          - AS
+          - AA
+          - AE
+          - AP
+          - FM
+          - MH
+          - PW
+          - ZZ
+    - name: expect_column_unique_value_count_to_be_between
+      description: Every state should appear; no unexpected new codes.
+      dimension: accuracy
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_unique_value_count_to_be_between
+        kwargs:
+          column: Rndrng_Prvdr_State_Abrvtn
+          min_value: 40
+          max_value: 63
+  - name: Rndrng_Prvdr_State_FIPS
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_Zip5
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_RUCA
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_RUCA_Desc
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_Cntry
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+  - name: Rndrng_Prvdr_Type
+    logicalType: string
+    physicalType: text
+    required: true
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Rndrng_Prvdr_Type
+    - name: expect_column_values_to_not_be_null
+      description: Never null in any released MUP file.
+      dimension: completeness
+      severity: error
+      type: library
+      metric: nullValues
+      mustBe: 0
+    - name: expect_column_unique_value_count_to_be_between
+      description: CMS publishes on the order of 100 provider taxonomies.
+      dimension: accuracy
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_unique_value_count_to_be_between
+        kwargs:
+          column: Rndrng_Prvdr_Type
+          min_value: 50
+          max_value: 250
+  - name: Rndrng_Prvdr_Mdcr_Prtcptg_Ind
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_in_set
+      description: Medicare participation is a Y/N flag.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_in_set
+        kwargs:
+          column: Rndrng_Prvdr_Mdcr_Prtcptg_Ind
+          value_set:
+          - Y
+          - N
+  - name: Tot_HCPCS_Cds
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Drug_Tot_HCPCS_Cds is the drug or medical share of Tot_HCPCS_Cds, so it cannot exceed
+        it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_HCPCS_Cds
+          column_B: Drug_Tot_HCPCS_Cds
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Med_Tot_HCPCS_Cds is the drug or medical share of Tot_HCPCS_Cds, so it cannot exceed
+        it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_HCPCS_Cds
+          column_B: Med_Tot_HCPCS_Cds
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Tot_Benes
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Benes
+    - name: expect_column_values_to_be_between
+      description: A billed row means at least one beneficiary.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Benes
+          min_value: 1.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Drug_Tot_Benes is the drug or medical share of Tot_Benes, so it cannot exceed it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Benes
+          column_B: Drug_Tot_Benes
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Med_Tot_Benes is the drug or medical share of Tot_Benes, so it cannot exceed it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Benes
+          column_B: Med_Tot_Benes
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Tot_Srvcs
+    logicalType: number
+    physicalType: double precision
+    required: true
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Srvcs
+    - name: expect_column_values_to_not_be_null
+      description: Never null in any released MUP file.
+      dimension: completeness
+      severity: error
+      type: library
+      metric: nullValues
+      mustBe: 0
+    - name: expect_column_values_to_be_between
+      description: A billed row means at least one service.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Srvcs
+          min_value: 1.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Drug_Tot_Srvcs is the drug or medical share of Tot_Srvcs, so it cannot exceed it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Srvcs
+          column_B: Drug_Tot_Srvcs
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Med_Tot_Srvcs is the drug or medical share of Tot_Srvcs, so it cannot exceed it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Srvcs
+          column_B: Med_Tot_Srvcs
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Each beneficiary accounts for at least one service.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Srvcs
+          column_B: Tot_Benes
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Tot_Sbmtd_Chrg
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Sbmtd_Chrg
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Sbmtd_Chrg
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: submitted charge is never below the allowed amount
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Sbmtd_Chrg
+          column_B: Tot_Mdcr_Alowd_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Drug_Sbmtd_Chrg is the drug or medical share of Tot_Sbmtd_Chrg, so it cannot exceed
+        it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Sbmtd_Chrg
+          column_B: Drug_Sbmtd_Chrg
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Med_Sbmtd_Chrg is the drug or medical share of Tot_Sbmtd_Chrg, so it cannot exceed
+        it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Sbmtd_Chrg
+          column_B: Med_Sbmtd_Chrg
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_first_digits_to_follow_benfords_law
+      description: Leading-digit screen on Tot_Sbmtd_Chrg; Nigrini MAD band.
+      dimension: accuracy
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_first_digits_to_follow_benfords_law
+        kwargs:
+          column: Tot_Sbmtd_Chrg
+  - name: Tot_Mdcr_Alowd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Mdcr_Alowd_Amt
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Mdcr_Alowd_Amt
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: allowed amount includes the Medicare payment, so it is never smaller
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Mdcr_Alowd_Amt
+          column_B: Tot_Mdcr_Pymt_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_first_digits_to_follow_benfords_law
+      description: Leading-digit screen on Tot_Mdcr_Alowd_Amt; Nigrini MAD band.
+      dimension: accuracy
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_first_digits_to_follow_benfords_law
+        kwargs:
+          column: Tot_Mdcr_Alowd_Amt
+  - name: Tot_Mdcr_Pymt_Amt
+    logicalType: number
+    physicalType: double precision
+    required: true
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Mdcr_Pymt_Amt
+    - name: expect_column_values_to_not_be_null
+      description: Never null in any released MUP file.
+      dimension: completeness
+      severity: error
+      type: library
+      metric: nullValues
+      mustBe: 0
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Mdcr_Pymt_Amt
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Drug_Mdcr_Pymt_Amt is the drug or medical share of Tot_Mdcr_Pymt_Amt, so it cannot
+        exceed it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Mdcr_Pymt_Amt
+          column_B: Drug_Mdcr_Pymt_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: Med_Mdcr_Pymt_Amt is the drug or medical share of Tot_Mdcr_Pymt_Amt, so it cannot exceed
+        it.
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Tot_Mdcr_Pymt_Amt
+          column_B: Med_Mdcr_Pymt_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+    - name: expect_column_first_digits_to_follow_benfords_law
+      description: Leading-digit screen on Tot_Mdcr_Pymt_Amt; Nigrini MAD band.
+      dimension: accuracy
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_first_digits_to_follow_benfords_law
+        kwargs:
+          column: Tot_Mdcr_Pymt_Amt
+  - name: Tot_Mdcr_Stdzd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_to_exist
+      description: Read directly by the load and validate steps.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_to_exist
+        kwargs:
+          column: Tot_Mdcr_Stdzd_Amt
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: error
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Tot_Mdcr_Stdzd_Amt
+          min_value: 0.0
+  - name: Drug_Sprsn_Ind
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_in_set
+      description: '''*'' = suppressed for fewer than 11 beneficiaries; ''#'' = counter-suppressed to
+        prevent recalculation.'
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_in_set
+        kwargs:
+          column: Drug_Sprsn_Ind
+          value_set:
+          - '*'
+          - '#'
+  - name: Drug_Tot_HCPCS_Cds
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+  - name: Drug_Tot_Benes
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+  - name: Drug_Tot_Srvcs
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Service counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Drug_Tot_Srvcs
+          min_value: 0.0
+  - name: Drug_Sbmtd_Chrg
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Drug_Sbmtd_Chrg
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: same chain, drug services only
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Drug_Sbmtd_Chrg
+          column_B: Drug_Mdcr_Alowd_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Drug_Mdcr_Alowd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Drug_Mdcr_Alowd_Amt
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: same chain, drug services only
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Drug_Mdcr_Alowd_Amt
+          column_B: Drug_Mdcr_Pymt_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Drug_Mdcr_Pymt_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Drug_Mdcr_Pymt_Amt
+          min_value: 0.0
+  - name: Drug_Mdcr_Stdzd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Drug_Mdcr_Stdzd_Amt
+          min_value: 0.0
+  - name: Med_Sprsn_Ind
+    logicalType: string
+    physicalType: text
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_in_set
+      description: '''*'' = suppressed for fewer than 11 beneficiaries; ''#'' = counter-suppressed to
+        prevent recalculation.'
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_in_set
+        kwargs:
+          column: Med_Sprsn_Ind
+          value_set:
+          - '*'
+          - '#'
+  - name: Med_Tot_HCPCS_Cds
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+  - name: Med_Tot_Benes
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+  - name: Med_Tot_Srvcs
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Service counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Med_Tot_Srvcs
+          min_value: 0.0
+  - name: Med_Sbmtd_Chrg
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Med_Sbmtd_Chrg
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: same chain, medical services only
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Med_Sbmtd_Chrg
+          column_B: Med_Mdcr_Alowd_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Med_Mdcr_Alowd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Med_Mdcr_Alowd_Amt
+          min_value: 0.0
+    - name: expect_column_pair_values_a_to_be_greater_than_b
+      description: same chain, medical services only
+      dimension: consistency
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_pair_values_a_to_be_greater_than_b
+        kwargs:
+          column_A: Med_Mdcr_Alowd_Amt
+          column_B: Med_Mdcr_Pymt_Amt
+          or_equal: true
+          ignore_row_if: either_value_is_missing
+  - name: Med_Mdcr_Pymt_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Med_Mdcr_Pymt_Amt
+          min_value: 0.0
+  - name: Med_Mdcr_Stdzd_Amt
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Money paid or charged is never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Med_Mdcr_Stdzd_Amt
+          min_value: 0.0
+  - name: Bene_Avg_Age
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 90%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Age
+          min_value: 0.9
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: Medicare beneficiaries are 65+, or disabled and younger.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Age
+          min_value: 18.0
+          max_value: 100.0
+  - name: Bene_Age_LT_65_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Age_LT_65_Cnt
+          min_value: 0.0
+  - name: Bene_Age_65_74_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Age_65_74_Cnt
+          min_value: 0.0
+  - name: Bene_Age_75_84_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Age_75_84_Cnt
+          min_value: 0.0
+  - name: Bene_Age_GT_84_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Age_GT_84_Cnt
+          min_value: 0.0
+  - name: Bene_Feml_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 50%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Feml_Cnt
+          min_value: 0.5
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Feml_Cnt
+          min_value: 0.0
+  - name: Bene_Male_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 50%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Male_Cnt
+          min_value: 0.5
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Male_Cnt
+          min_value: 0.0
+  - name: Bene_Race_Wht_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_Wht_Cnt
+          min_value: 0.0
+  - name: Bene_Race_Black_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_Black_Cnt
+          min_value: 0.0
+  - name: Bene_Race_API_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_API_Cnt
+          min_value: 0.0
+  - name: Bene_Race_Hspnc_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_Hspnc_Cnt
+          min_value: 0.0
+  - name: Bene_Race_NatInd_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_NatInd_Cnt
+          min_value: 0.0
+  - name: Bene_Race_Othr_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Race_Othr_Cnt
+          min_value: 0.0
+  - name: Bene_Dual_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 50%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Dual_Cnt
+          min_value: 0.5
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Dual_Cnt
+          min_value: 0.0
+  - name: Bene_Ndual_Cnt
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 50%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Ndual_Cnt
+          min_value: 0.5
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: Beneficiary counts are never negative.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Ndual_Cnt
+          min_value: 0.0
+  - name: Bene_Avg_Risk_Scre
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 90%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Risk_Scre
+          min_value: 0.9
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: HCC risk score; 1.0 is an average beneficiary.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Risk_Scre
+          min_value: 0.0
+          max_value: 30.0
+  - name: Bene_CC_BH_ADHD_OthCD_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_ADHD_OthCD_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Alcohol_Drug_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Alcohol_Drug_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Tobacco_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Tobacco_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Alz_NonAlzdem_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Alz_NonAlzdem_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Anxiety_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Anxiety_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Bipolar_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Bipolar_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Mood_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Mood_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Depress_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Depress_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_PD_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_PD_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_PTSD_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_PTSD_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_BH_Schizo_OthPsy_V1_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_BH_Schizo_OthPsy_V1_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Asthma_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Asthma_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Afib_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Afib_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Cancer6_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Cancer6_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_CKD_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_CKD_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_COPD_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_COPD_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Diabetes_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Diabetes_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_HF_NonIHD_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_HF_NonIHD_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Hyperlipidemia_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Hyperlipidemia_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Hypertension_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Hypertension_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_IschemicHeart_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_IschemicHeart_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Osteoporosis_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Osteoporosis_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Parkinson_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Parkinson_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Arthritis_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Arthritis_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+  - name: Bene_CC_PH_Stroke_TIA_V2_Pct
+    logicalType: integer
+    physicalType: bigint
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_values_to_be_between
+      description: Percentage top-coded at 75 for beneficiary privacy.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_CC_PH_Stroke_TIA_V2_Pct
+          min_value: 0.0
+          max_value: 75.0
+slaProperties:
+- property: frequency
+  value: 1
+  unit: y
+  driver: regulatory
+- property: latency
+  value: 18
+  unit: m
+  driver: regulatory
+support:
+- channel: github-issues
+  tool: other
+  url: https://github.com/clyv/Medicare-GX/issues
+  scope: issues
+tags:
+- healthcare
+- data-contract
+- great-expectations
+customProperties:
+- property: validationEngine
+  value: great_expectations==1.19.1
+- property: executionEnvironments
+  value:
+  - pandas
+  - postgres
+  - spark
+- property: severityModel
+  value: error = blocking tier, fails CI. warning = advisory tier, reported in Data Docs and promoted
+    to error once a live run shows the rule holds.

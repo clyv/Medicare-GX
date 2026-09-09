@@ -1,0 +1,7 @@
+# Spark backend — kept separate so the Pandas and Postgres legs, and the
+# contract unit tests, do not pay for a ~300MB download they never use.
+#
+# 3.5.x rather than 4.x: it is the line Great Expectations' Spark support is
+# most exercised against, and it runs on Java 17, which the CI job installs.
+# GX 1.19.1 itself allows pyspark >=2.3.2,<4.2.
+pyspark>=3.5,<3.6

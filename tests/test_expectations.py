@@ -777,3 +777,70 @@ def test_identifier_columns_are_typed_as_text():
 
     assert "Rndrng_NPI" in STRING_COLUMNS
     assert "Rndrng_Prvdr_Zip5" in STRING_COLUMNS
+
+
+# ── ODCS export ────────────────────────────────────────────────────────────
+
+
+def test_odcs_document_matches_the_contract():
+    """The published ODCS document is generated, so it must never drift.
+
+    CI runs `export_odcs.py --check`; this is the same assertion, locally.
+    """
+    from pipelines.export_odcs import OUTPUT_PATH, render
+
+    committed = (Path(__file__).resolve().parents[1] / OUTPUT_PATH).read_text(
+        encoding="utf-8"
+    )
+    assert committed == render(), (
+        "contracts/mup_provider.odcs.yaml is stale — "
+        "run: python pipelines/export_odcs.py"
+    )
+
+
+def test_odcs_document_describes_every_column():
+    from pipelines.export_odcs import build_contract
+
+    properties = build_contract()["schema"][0]["properties"]
+    assert [p["name"] for p in properties] == ALL_COLUMNS
+
+
+def test_odcs_severity_matches_the_tier_model():
+    """ODCS error/warning is the same distinction as blocking/advisory."""
+    from pipelines.export_odcs import build_contract
+
+    contract = build_contract()
+    rules = list(contract["schema"][0]["quality"])
+    for prop in contract["schema"][0]["properties"]:
+        rules.extend(prop.get("quality", []))
+
+    severities = {r["severity"] for r in rules}
+    assert severities <= {"error", "warning"}
+
+    blocking_names = {e.configuration.type for e in blocking_expectations()}
+    for rule in rules:
+        if rule["severity"] == "error":
+            assert rule["name"] in blocking_names, rule["name"]
+
+
+def test_odcs_dimensions_use_the_standard_vocabulary():
+    from pipelines.export_odcs import build_contract
+
+    allowed = {
+        "accuracy", "completeness", "conformity", "consistency",
+        "coverage", "timeliness", "uniqueness",
+    }
+    contract = build_contract()
+    rules = list(contract["schema"][0]["quality"])
+    for prop in contract["schema"][0]["properties"]:
+        rules.extend(prop.get("quality", []))
+    assert {r["dimension"] for r in rules} <= allowed
+
+
+def test_odcs_marks_npi_as_the_primary_key():
+    from pipelines.export_odcs import build_contract
+
+    properties = {p["name"]: p for p in build_contract()["schema"][0]["properties"]}
+    assert properties["Rndrng_NPI"]["primaryKey"] is True
+    assert properties["Rndrng_NPI"]["required"] is True
+    assert properties["Rndrng_NPI"]["physicalType"] == "text"
