@@ -1,0 +1,43 @@
+name: Schema Probe
+
+# Reads the header of a remote CSV and prints its columns.
+#
+# Run this before writing a contract for a new CMS extract: it costs a few
+# seconds and a ranged request, and it removes the guesswork that otherwise
+# shows up as a red build with a confusing message.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "CSV URL to probe"
+        required: true
+        default: "https://data.cms.gov/sites/default/files/2025-04/e3f823f8-db5b-4cc7-ba04-e7ae92b99757/MUP_PHY_R25_P05_V20_D23_Prov_Svc.csv"
+      rows:
+        description: "Sample rows to print"
+        required: false
+        default: "2"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe remote CSV header
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install requests
+        run: pip install "requests>=2.31"
+
+      - name: Probe
+        run: |
+          python pipelines/probe_schema.py \
+            "${{ inputs.url }}" --rows "${{ inputs.rows }}"
