@@ -25,11 +25,13 @@ from pipelines.contract import (  # noqa: E402,F401  (re-exported for convenienc
     BLOCKING_SUITE_NAME,
     MONETARY_COLUMNS,
     NOT_NULL_COLUMNS,
+    PROFILING_SUITE_NAME,
     REQUIRED_COLUMNS,
     VALID_STATES,
     advisory_expectations,
     blocking_expectations,
     mup_provider_expectations,
+    profiling_expectations,
     summarise,
 )
 
@@ -57,6 +59,9 @@ def build_mup_provider_suites(context=None) -> dict:
         ),
         ADVISORY_SUITE_NAME: _write_suite(
             context, ADVISORY_SUITE_NAME, advisory_expectations()
+        ),
+        PROFILING_SUITE_NAME: _write_suite(
+            context, PROFILING_SUITE_NAME, profiling_expectations()
         ),
     }
 

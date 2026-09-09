@@ -17,12 +17,16 @@ import great_expectations as gx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import pipelines.expectations  # noqa: E402,F401  registers the custom Expectations
 from pipelines.contract import (  # noqa: E402
     ADVISORY,
     ADVISORY_SUITE_NAME,
     BLOCKING,
     BLOCKING_SUITE_NAME,
+    PROFILING_SUITE_NAME,
 )
+
+PROFILING = "profiling"
 
 # Blocking runs COMPLETE so a failure carries every offending value into Data
 # Docs. Advisory runs SUMMARY: 84 rules over 1.26M rows is a lot of unexpected
@@ -34,9 +38,13 @@ _RESULT_FORMATS = {
         "return_unexpected_index_list": False,
     },
     ADVISORY: {"result_format": "SUMMARY"},
+    PROFILING: {"result_format": "SUMMARY"},
 }
 
-_TIERS = ((BLOCKING, BLOCKING_SUITE_NAME), (ADVISORY, ADVISORY_SUITE_NAME))
+# Every backend runs the portable contract. Only Pandas runs the profiling
+# suite, whose expectations are implemented for that engine alone.
+PORTABLE_TIERS = ((BLOCKING, BLOCKING_SUITE_NAME), (ADVISORY, ADVISORY_SUITE_NAME))
+PANDAS_TIERS = PORTABLE_TIERS + ((PROFILING, PROFILING_SUITE_NAME),)
 
 
 def _run_tier(context, batch_definition, prefix: str, tier: str, suite_name: str):
@@ -93,12 +101,18 @@ def _report(tier: str, results) -> list:
     return failures
 
 
-def run_tiered_validation(context, batch_definition, backend_label: str, prefix: str) -> bool:
-    """Validate one batch against both tiers. True when the blocking tier passed."""
+def run_tiered_validation(
+    context,
+    batch_definition,
+    backend_label: str,
+    prefix: str,
+    tiers=PORTABLE_TIERS,
+) -> bool:
+    """Validate one batch against each tier. True when the blocking tier passed."""
     print(f"\n[RUN] Validating {backend_label} against the contract...")
 
     outcomes = {}
-    for tier, suite_name in _TIERS:
+    for tier, suite_name in tiers:
         results = _run_tier(context, batch_definition, prefix, tier, suite_name)
         outcomes[tier] = _report(tier, results)
 
@@ -121,6 +135,14 @@ def run_tiered_validation(context, batch_definition, backend_label: str, prefix:
         )
     else:
         print("\n[ADVISORY] Every advisory rule held — candidates for promotion to blocking.")
+
+    if PROFILING in outcomes:
+        flagged = len(outcomes[PROFILING])
+        print(
+            f"\n[PROFILE] Benford screen: {flagged} column(s) outside the conformity band.\n"
+            "          A screening signal only — administered fee schedules can "
+            "deviate legitimately."
+        )
 
     print("\n[DOCS] Data Docs built -> gx/uncommitted/data_docs/local_site/index.html")
 

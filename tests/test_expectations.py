@@ -28,6 +28,16 @@ from great_expectations.core.expectation_suite import ExpectationSuite  # noqa: 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from pipelines.expectations import (  # noqa: E402
+    ExpectColumnFirstDigitsToFollowBenfordsLaw,
+    ExpectColumnValuesToBeValidNpi,
+    benford_mad,
+    complete_npi,
+    conformity_band,
+    first_significant_digit,
+    is_valid_npi,
+    npi_check_digit,
+)
 from pipelines.contract import (  # noqa: E402
     ADVISORY,
     ALL_COLUMNS,
@@ -46,6 +56,7 @@ from pipelines.contract import (  # noqa: E402
     advisory_expectations,
     blocking_expectations,
     mup_provider_expectations,
+    profiling_expectations,
     severity_of,
 )
 
@@ -89,7 +100,8 @@ def valid_df() -> pd.DataFrame:
 
     data = {
         # ── identity ───────────────────────────────────────────────────────
-        "Rndrng_NPI": [f"1{i:09d}" for i in range(n)],
+        # Real check digits, so the NPI Luhn expectation has valid input.
+        "Rndrng_NPI": [complete_npi(f"1{i:08d}") for i in range(n)],
         "Rndrng_Prvdr_Last_Org_Name": [f"Provider{i}" for i in range(n)],
         "Rndrng_Prvdr_First_Name": [f"First{i}" for i in range(n)],
         "Rndrng_Prvdr_MI": ["B"] * n,
@@ -373,6 +385,12 @@ def _alphabetic_npi(df):
     return df
 
 
+def _bad_check_digit(df):
+    """Ten digits, unique, non-null, correctly formatted — and not a real NPI."""
+    df.loc[0, "Rndrng_NPI"] = "1234567890"
+    return df
+
+
 def _negative_payment(df):
     df.loc[0, "Tot_Mdcr_Pymt_Amt"] = -1.0
     return df
@@ -446,6 +464,7 @@ def _more_benes_than_services(df):
         (_duplicate_npi, ("expect_column_values_to_be_unique", "Rndrng_NPI")),
         (_short_npi, ("expect_column_value_lengths_to_equal", "Rndrng_NPI")),
         (_alphabetic_npi, ("expect_column_values_to_match_regex", "Rndrng_NPI")),
+        (_bad_check_digit, ("expect_column_values_to_be_valid_npi", "Rndrng_NPI")),
         (_negative_payment, ("expect_column_values_to_be_between", "Tot_Mdcr_Pymt_Amt")),
         (_zero_services, ("expect_column_values_to_be_between", "Tot_Srvcs")),
         (_zero_benes, ("expect_column_values_to_be_between", "Tot_Benes")),
@@ -495,6 +514,7 @@ def _more_benes_than_services(df):
         "duplicate_npi",
         "npi_wrong_length",
         "npi_not_numeric",
+        "npi_bad_check_digit",
         "negative_medicare_payment",
         "zero_services",
         "zero_beneficiaries",
@@ -541,3 +561,179 @@ def test_unexpected_new_column_is_caught(context, batch_definition, valid_df):
     )
     assert not result.success
     assert ("expect_table_columns_to_match_set", None) in failed(result)
+
+
+# ── Custom expectation: NPI check digit ────────────────────────────────────
+
+
+def test_canonical_cms_npi_example_validates():
+    """1234567893 is CMS's own worked example in the check-digit spec."""
+    assert is_valid_npi("1234567893")
+
+
+def test_check_digit_matches_the_cms_worked_example():
+    assert npi_check_digit("123456789") == 3
+
+
+def test_ten_digits_is_not_enough():
+    """The whole point of the rule: well formed, and still not a real NPI."""
+    assert not is_valid_npi("1234567890")
+    assert not is_valid_npi("1111111111")
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "123456789", "12345678901", "ABCDEFGHIJ", "123456789X", None, "  ", "1234-56789"],
+    ids=["empty", "nine_digits", "eleven_digits", "letters", "trailing_letter",
+         "none", "whitespace", "punctuation"],
+)
+def test_malformed_npis_are_rejected(value):
+    assert not is_valid_npi(value)
+
+
+def test_complete_npi_always_produces_a_valid_identifier():
+    for stem in ["100000000", "987654321", "000000000", "199999999"]:
+        assert is_valid_npi(complete_npi(stem)), stem
+
+
+def test_complete_npi_rejects_a_bad_stem():
+    for bad in ["12345678", "1234567890", "abcdefghi"]:
+        with pytest.raises(ValueError):
+            complete_npi(bad)
+
+
+def test_npi_expectation_separates_valid_from_invalid(context, batch_definition):
+    df = pd.DataFrame(
+        {"npi": [complete_npi("100000000"), complete_npi("123456789"),
+                 "1234567890", "1111111111"]}
+    )
+    result = validate(
+        context, batch_definition, df, [ExpectColumnValuesToBeValidNpi(column="npi")]
+    )
+    assert not result.success
+    assert result.results[0].result["unexpected_count"] == 2
+
+
+# ── Custom expectation: Benford's Law ──────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [(123.4, 1), (0.00456, 4), (9, 9), (-750.0, 7), (1e6, 1), (0.9, 9)],
+)
+def test_first_significant_digit(value, expected):
+    assert first_significant_digit(value) == expected
+
+
+@pytest.mark.parametrize("value", [0, None, "abc", float("nan"), float("inf")])
+def test_first_significant_digit_is_undefined_for(value):
+    assert first_significant_digit(value) is None
+
+
+def test_benford_mad_is_near_zero_for_conforming_data():
+    """A log-uniform sample follows Benford by construction."""
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    assert benford_mad(10 ** rng.uniform(0, 5, 20_000)) < 0.006  # close conformity
+
+
+def test_benford_mad_is_large_for_fabricated_data():
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    fabricated = rng.uniform(5000, 5999, 20_000)  # every value leads with 5
+    assert benford_mad(fabricated) > 0.015  # Nigrini nonconformity
+
+
+def test_benford_mad_is_undefined_for_an_empty_column():
+    mad = benford_mad([])
+    assert mad != mad  # NaN
+
+
+@pytest.mark.parametrize(
+    "mad, band",
+    [(0.001, "close"), (0.010, "acceptable"), (0.014, "marginal"),
+     (0.2, "nonconformant"), (float("nan"), "undefined")],
+)
+def test_conformity_bands(mad, band):
+    assert conformity_band(mad) == band
+
+
+def test_benford_expectation_flags_a_fabricated_column(context, batch_definition):
+    import numpy as np
+
+    rng = np.random.default_rng(7)
+    df = pd.DataFrame(
+        {
+            "conforming": 10 ** rng.uniform(0, 5, 5_000),
+            "fabricated": rng.uniform(5000, 5999, 5_000),
+        }
+    )
+    good = validate(
+        context, batch_definition, df,
+        [ExpectColumnFirstDigitsToFollowBenfordsLaw(column="conforming")],
+    )
+    bad = validate(
+        context, batch_definition, df,
+        [ExpectColumnFirstDigitsToFollowBenfordsLaw(column="fabricated")],
+    )
+    assert good.success
+    assert not bad.success
+
+
+# ── Tier placement of the custom expectations ──────────────────────────────
+
+
+def test_profiling_tier_is_pandas_only_and_non_empty():
+    """Benford has no SQL or Spark implementation, so it must stay out of the
+    portable contract — otherwise the Postgres and Spark runs would report a
+    missing metric as a failure."""
+    assert profiling_expectations()
+    portable_types = {type(e) for e in mup_provider_expectations()}
+    assert ExpectColumnFirstDigitsToFollowBenfordsLaw not in portable_types
+
+
+def test_npi_luhn_rule_is_in_the_portable_contract():
+    """Unlike Benford, the NPI check is implemented on all three engines."""
+    assert any(
+        isinstance(e, ExpectColumnValuesToBeValidNpi)
+        for e in mup_provider_expectations()
+    )
+
+
+# ── Suite persistence ──────────────────────────────────────────────────────
+
+
+def test_custom_expectations_survive_a_save_and_reload(tmp_path, monkeypatch):
+    """CI builds the suites in one process and validates in another.
+
+    A custom Expectation is serialised by its registered type name, so if the
+    class is not imported before the suite is read back, GX cannot resolve it.
+    This is the regression guard for that.
+    """
+    monkeypatch.chdir(tmp_path)
+
+    from pipelines.build_suites import build_mup_provider_suites
+    from pipelines.contract import ADVISORY_SUITE_NAME, PROFILING_SUITE_NAME
+
+    written = build_mup_provider_suites()
+
+    reloaded_context = gx.get_context(mode="file")
+    for name, original in written.items():
+        reloaded = reloaded_context.suites.get(name)
+        assert len(reloaded.expectations) == len(original.expectations), name
+
+    advisory = reloaded_context.suites.get(ADVISORY_SUITE_NAME)
+    npi_rules = [
+        e for e in advisory.expectations
+        if e.configuration.type == "expect_column_values_to_be_valid_npi"
+    ]
+    assert len(npi_rules) == 1
+    assert isinstance(npi_rules[0], ExpectColumnValuesToBeValidNpi)
+
+    profiling = reloaded_context.suites.get(PROFILING_SUITE_NAME)
+    assert all(
+        isinstance(e, ExpectColumnFirstDigitsToFollowBenfordsLaw)
+        for e in profiling.expectations
+    )

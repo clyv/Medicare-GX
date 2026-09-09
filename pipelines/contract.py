@@ -26,11 +26,20 @@ from __future__ import annotations
 
 import great_expectations.expectations as gxe
 
+from pipelines.expectations import (
+    ExpectColumnFirstDigitsToFollowBenfordsLaw,
+    ExpectColumnValuesToBeValidNpi,
+)
+
 BLOCKING = "blocking"
 ADVISORY = "advisory"
 
 BLOCKING_SUITE_NAME = "mup_provider_blocking"
 ADVISORY_SUITE_NAME = "mup_provider_advisory"
+
+# Pandas-only screening. Kept out of the two portable suites so that
+# "the same contract runs on every backend" stays literally true.
+PROFILING_SUITE_NAME = "mup_provider_profiling"
 
 # Quality dimensions, in the DAMA sense — used to group Data Docs output.
 SCHEMA = "schema"
@@ -276,6 +285,17 @@ def _validity_rules() -> list:
             column="Rndrng_NPI", regex=NPI_REGEX,
             meta=_meta(ADVISORY, VALIDITY, "Length alone would accept 10 letters."),
         ),
+        # Ten digits is necessary but not sufficient: an NPI carries a Luhn
+        # check digit over the 80840 prefix, so '1234567890' is well formed
+        # and still not a real identifier.
+        ExpectColumnValuesToBeValidNpi(
+            column="Rndrng_NPI",
+            meta=_meta(
+                ADVISORY, VALIDITY,
+                "NPI check digit, per the Luhn formula CMS specifies over the "
+                "80840 prefix. No format rule can catch a bad check digit.",
+            ),
+        ),
         gxe.ExpectColumnValuesToBeInSet(
             column="Rndrng_Prvdr_Ent_Cd", value_set=ENTITY_CODES,
             meta=_meta(ADVISORY, VALIDITY, "I = individual practitioner, O = organisation."),
@@ -483,8 +503,29 @@ def _distribution_rules() -> list:
     ]
 
 
+def profiling_expectations() -> list:
+    """Pandas-only screening. Never fails a build; not part of the portable contract.
+
+    Benford's Law is a forensic-accounting screen, not a contract term: a
+    deviation is a prompt to look, not evidence of anything. Medicare fee
+    schedules cluster around administered prices, which can legitimately
+    break the scale-invariance Benford assumes — so this is expected to be
+    informative rather than clean.
+    """
+    return [
+        ExpectColumnFirstDigitsToFollowBenfordsLaw(
+            column=column,
+            meta=_meta(
+                ADVISORY, DISTRIBUTION,
+                f"Leading-digit screen on {column}; Nigrini MAD band.",
+            ),
+        )
+        for column in ["Tot_Sbmtd_Chrg", "Tot_Mdcr_Alowd_Amt", "Tot_Mdcr_Pymt_Amt"]
+    ]
+
+
 def mup_provider_expectations() -> list:
-    """Every rule in the contract, blocking and advisory alike."""
+    """Every rule in the portable contract, blocking and advisory alike."""
     return (
         _schema_rules()
         + _completeness_rules()

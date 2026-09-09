@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pipelines.validation import run_tiered_validation  # noqa: E402
+from pipelines.validation import PANDAS_TIERS, run_tiered_validation  # noqa: E402
 
 load_dotenv()
 
@@ -59,6 +59,7 @@ def run_pandas_validation() -> bool:
         batch_definition,
         backend_label=f"Pandas — {DATA_FILE.name}",
         prefix=PREFIX,
+        tiers=PANDAS_TIERS,
     )
 
 
