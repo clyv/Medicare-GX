@@ -148,6 +148,29 @@ ALL_COLUMNS = (
 )
 
 
+# ── Physical types ─────────────────────────────────────────────────────────
+# Needed wherever a reader will not infer correctly. Spark and Pandas both
+# guess int64 for Rndrng_NPI, which silently drops a leading zero and stops
+# the value matching the TEXT column Postgres holds.
+
+STRING_COLUMNS = IDENTITY_COLUMNS + ["Drug_Sprsn_Ind", "Med_Sprsn_Ind"]
+
+FLOAT_COLUMNS = [
+    "Tot_Srvcs", "Tot_Sbmtd_Chrg", "Tot_Mdcr_Alowd_Amt", "Tot_Mdcr_Pymt_Amt",
+    "Tot_Mdcr_Stdzd_Amt",
+    "Drug_Tot_Srvcs", "Drug_Sbmtd_Chrg", "Drug_Mdcr_Alowd_Amt",
+    "Drug_Mdcr_Pymt_Amt", "Drug_Mdcr_Stdzd_Amt",
+    "Med_Tot_Srvcs", "Med_Sbmtd_Chrg", "Med_Mdcr_Alowd_Amt",
+    "Med_Mdcr_Pymt_Amt", "Med_Mdcr_Stdzd_Amt",
+    "Bene_Avg_Risk_Scre",
+]
+
+# Counts and top-coded percentages — everything not text and not a float.
+INTEGER_COLUMNS = [
+    c for c in ALL_COLUMNS if c not in set(STRING_COLUMNS) | set(FLOAT_COLUMNS)
+]
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # Domain constants — every one of these is a documented CMS rule
 # ══════════════════════════════════════════════════════════════════════════

@@ -47,7 +47,9 @@ PORTABLE_TIERS = ((BLOCKING, BLOCKING_SUITE_NAME), (ADVISORY, ADVISORY_SUITE_NAM
 PANDAS_TIERS = PORTABLE_TIERS + ((PROFILING, PROFILING_SUITE_NAME),)
 
 
-def _run_tier(context, batch_definition, prefix: str, tier: str, suite_name: str):
+def _run_tier(
+    context, batch_definition, prefix: str, tier: str, suite_name: str, batch_parameters
+):
     suite = context.suites.get(suite_name)
 
     valdef_name = f"{prefix}_{tier}_valdef"
@@ -72,7 +74,9 @@ def _run_tier(context, batch_definition, prefix: str, tier: str, suite_name: str
             result_format=_RESULT_FORMATS[tier],
         )
     )
-    return checkpoint.run()
+    # Dataframe assets (Spark, in-memory Pandas) are handed their frame at run
+    # time; file and table assets resolve their own batch and pass None.
+    return checkpoint.run(batch_parameters=batch_parameters)
 
 
 def _report(tier: str, results) -> list:
@@ -107,13 +111,16 @@ def run_tiered_validation(
     backend_label: str,
     prefix: str,
     tiers=PORTABLE_TIERS,
+    batch_parameters=None,
 ) -> bool:
     """Validate one batch against each tier. True when the blocking tier passed."""
     print(f"\n[RUN] Validating {backend_label} against the contract...")
 
     outcomes = {}
     for tier, suite_name in tiers:
-        results = _run_tier(context, batch_definition, prefix, tier, suite_name)
+        results = _run_tier(
+            context, batch_definition, prefix, tier, suite_name, batch_parameters
+        )
         outcomes[tier] = _report(tier, results)
 
     context.build_data_docs()

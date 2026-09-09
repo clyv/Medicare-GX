@@ -737,3 +737,43 @@ def test_custom_expectations_survive_a_save_and_reload(tmp_path, monkeypatch):
         isinstance(e, ExpectColumnFirstDigitsToFollowBenfordsLaw)
         for e in profiling.expectations
     )
+
+
+# ── Datasource configuration ───────────────────────────────────────────────
+
+
+def test_pandas_read_options_are_json_serialisable():
+    """The asset config is written into gx/great_expectations.yml.
+
+    Passing the builtin `str` as a dtype works against an ephemeral context
+    and then dies on a file one with "Object of type 'type' is not JSON
+    serializable", which is a CI-only failure. Dtypes must be spelled as
+    strings.
+    """
+    import json
+
+    from pipelines.validate_pandas import DTYPES
+
+    json.dumps(DTYPES)
+    assert all(isinstance(v, str) for v in DTYPES.values())
+
+
+def test_declared_types_partition_the_schema():
+    """Every column has exactly one physical type, and the lists agree with ALL_COLUMNS."""
+    from pipelines.contract import FLOAT_COLUMNS, INTEGER_COLUMNS, STRING_COLUMNS
+
+    string_cols, float_cols, int_cols = (
+        set(STRING_COLUMNS), set(FLOAT_COLUMNS), set(INTEGER_COLUMNS)
+    )
+    assert string_cols | float_cols | int_cols == set(ALL_COLUMNS)
+    assert not (string_cols & float_cols)
+    assert not (string_cols & int_cols)
+    assert not (float_cols & int_cols)
+
+
+def test_identifier_columns_are_typed_as_text():
+    """Rndrng_NPI as an integer would drop a leading zero and break backend parity."""
+    from pipelines.contract import STRING_COLUMNS
+
+    assert "Rndrng_NPI" in STRING_COLUMNS
+    assert "Rndrng_Prvdr_Zip5" in STRING_COLUMNS

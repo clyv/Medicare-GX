@@ -26,9 +26,13 @@ PREFIX = "mup_pandas"
 # any leading zero and stop matching the TEXT column Postgres holds, which
 # would quietly make the two backends validate different data. Zip5 is
 # alphanumeric for Canadian providers (state ZZ), e.g. 'K1H8'.
+#
+# Spelled as the string "str" rather than the builtin: the asset config is
+# serialised into gx/great_expectations.yml, and a Python type object is not
+# JSON serialisable.
 DTYPES = {
-    "Rndrng_NPI": str,
-    "Rndrng_Prvdr_Zip5": str,
+    "Rndrng_NPI": "str",
+    "Rndrng_Prvdr_Zip5": "str",
 }
 
 
