@@ -93,6 +93,15 @@ def run_spark_validation() -> bool:
         header=True,
         schema=build_schema(),
         mode="PERMISSIVE",
+        # Rndrng_Prvdr_RUCA_Desc carries long quoted descriptions that contain
+        # newlines. Spark's CSV reader splits on raw newlines by default, which
+        # tears those records apart and shifts every later column along the row.
+        # It is silent: the row count stays plausible and only a column-level
+        # rule notices. The first tri-backend run caught it as Bene_Avg_Risk_Scre
+        # reading 33% non-null on Spark against 100% on Pandas and Postgres.
+        multiLine=True,
+        quote='"',
+        escape='"',
     )
     print(f"[INFO] Read {DATA_FILE.name} with a declared {len(ALL_COLUMNS)}-column schema.")
 

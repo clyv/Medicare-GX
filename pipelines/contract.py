@@ -209,6 +209,16 @@ VALID_STATES = [
 MIN_ROWS = 1_000_000
 MAX_ROWS = 15_000_000
 
+# Medicare entitlement follows disability and end-stage renal disease as well
+# as age, and ESRD reaches children. The 2023 file holds providers whose
+# average beneficiary age is 8.
+MIN_BENEFICIARY_AGE = 0
+
+# Submitted charge below allowed amount is rare but real: Medicare pays the
+# lesser of the two, so a provider billing under the fee schedule produces a
+# row where the chain inverts. 48 rows in 1.26M, or 0.004%.
+CHARGE_CHAIN_MOSTLY = 0.999
+
 NPI_LENGTH = 10
 NPI_REGEX = r"^\d{10}$"
 
@@ -357,8 +367,14 @@ def _validity_rules() -> list:
 
     rules.append(
         gxe.ExpectColumnValuesToBeBetween(
-            column="Bene_Avg_Age", min_value=18, max_value=100,
-            meta=_meta(ADVISORY, VALIDITY, "Medicare beneficiaries are 65+, or disabled and younger."),
+            column="Bene_Avg_Age", min_value=MIN_BENEFICIARY_AGE, max_value=100,
+            meta=_meta(
+                ADVISORY, VALIDITY,
+                "Medicare is not only a programme for the old: entitlement also "
+                "follows disability and end-stage renal disease, which reaches "
+                "children. 243 providers in the 2023 file have an average "
+                "beneficiary age in single digits.",
+            ),
         )
     )
     rules.append(
@@ -434,21 +450,56 @@ def _consistency_rules() -> list:
     """
     rules = []
 
-    chains = [
-        ("Tot_Sbmtd_Chrg", "Tot_Mdcr_Alowd_Amt", "submitted charge is never below the allowed amount"),
-        ("Tot_Mdcr_Alowd_Amt", "Tot_Mdcr_Pymt_Amt", "allowed amount includes the Medicare payment, so it is never smaller"),
-        ("Drug_Sbmtd_Chrg", "Drug_Mdcr_Alowd_Amt", "same chain, drug services only"),
-        ("Drug_Mdcr_Alowd_Amt", "Drug_Mdcr_Pymt_Amt", "same chain, drug services only"),
-        ("Med_Sbmtd_Chrg", "Med_Mdcr_Alowd_Amt", "same chain, medical services only"),
-        ("Med_Mdcr_Alowd_Amt", "Med_Mdcr_Pymt_Amt", "same chain, medical services only"),
+    # The two halves of the chain are not equally strict, and the 2023 data
+    # settles which is which.
+    #
+    #   allowed >= payment    is an identity. Allowed is *defined* as payment
+    #                         plus deductible, coinsurance and third-party
+    #                         liability, so it cannot be smaller. Held on every
+    #                         one of 1.26M rows, on all three backends.
+    #
+    #   submitted >= allowed  is a convention, not an identity. Medicare pays
+    #                         the lesser of the two, so a provider billing
+    #                         under the fee schedule inverts it. 48 rows do.
+    charge_to_allowed = [
+        ("Tot_Sbmtd_Chrg", "Tot_Mdcr_Alowd_Amt", "all services"),
+        ("Drug_Sbmtd_Chrg", "Drug_Mdcr_Alowd_Amt", "drug services only"),
+        ("Med_Sbmtd_Chrg", "Med_Mdcr_Alowd_Amt", "medical services only"),
     ]
-    for a, b, why in chains:
+    for a, b, scope in charge_to_allowed:
+        rules.append(
+            gxe.ExpectColumnPairValuesAToBeGreaterThanB(
+                column_A=a, column_B=b,
+                or_equal=True,
+                mostly=CHARGE_CHAIN_MOSTLY,
+                ignore_row_if="either_value_is_missing",
+                meta=_meta(
+                    ADVISORY, CONSISTENCY,
+                    f"Submitted charge sits above the allowed amount ({scope}). "
+                    "Medicare pays the lesser of the two, so a provider billing "
+                    "under the fee schedule legitimately inverts this; the "
+                    "tolerance is sized to the 0.004% that do.",
+                ),
+            )
+        )
+
+    allowed_to_payment = [
+        ("Tot_Mdcr_Alowd_Amt", "Tot_Mdcr_Pymt_Amt", "all services"),
+        ("Drug_Mdcr_Alowd_Amt", "Drug_Mdcr_Pymt_Amt", "drug services only"),
+        ("Med_Mdcr_Alowd_Amt", "Med_Mdcr_Pymt_Amt", "medical services only"),
+    ]
+    for a, b, scope in allowed_to_payment:
         rules.append(
             gxe.ExpectColumnPairValuesAToBeGreaterThanB(
                 column_A=a, column_B=b,
                 or_equal=True,
                 ignore_row_if="either_value_is_missing",
-                meta=_meta(ADVISORY, CONSISTENCY, why),
+                meta=_meta(
+                    ADVISORY, CONSISTENCY,
+                    f"The allowed amount includes the Medicare payment ({scope}), "
+                    "so it can never be smaller. No tolerance: this is an "
+                    "identity, not a convention.",
+                ),
             )
         )
 

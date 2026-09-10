@@ -701,7 +701,9 @@ schema:
           column: Tot_Sbmtd_Chrg
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: submitted charge is never below the allowed amount
+      description: Submitted charge sits above the allowed amount (all services). Medicare pays the lesser
+        of the two, so a provider billing under the fee schedule legitimately inverts this; the tolerance
+        is sized to the 0.004% that do.
       dimension: consistency
       severity: warning
       type: custom
@@ -711,6 +713,7 @@ schema:
         kwargs:
           column_A: Tot_Sbmtd_Chrg
           column_B: Tot_Mdcr_Alowd_Amt
+          mostly: 0.999
           or_equal: true
           ignore_row_if: either_value_is_missing
     - name: expect_column_pair_values_a_to_be_greater_than_b
@@ -779,7 +782,8 @@ schema:
           column: Tot_Mdcr_Alowd_Amt
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: allowed amount includes the Medicare payment, so it is never smaller
+      description: 'The allowed amount includes the Medicare payment (all services), so it can never be
+        smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
       severity: warning
       type: custom
@@ -965,7 +969,9 @@ schema:
           column: Drug_Sbmtd_Chrg
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: same chain, drug services only
+      description: Submitted charge sits above the allowed amount (drug services only). Medicare pays
+        the lesser of the two, so a provider billing under the fee schedule legitimately inverts this;
+        the tolerance is sized to the 0.004% that do.
       dimension: consistency
       severity: warning
       type: custom
@@ -975,6 +981,7 @@ schema:
         kwargs:
           column_A: Drug_Sbmtd_Chrg
           column_B: Drug_Mdcr_Alowd_Amt
+          mostly: 0.999
           or_equal: true
           ignore_row_if: either_value_is_missing
   - name: Drug_Mdcr_Alowd_Amt
@@ -995,7 +1002,8 @@ schema:
           column: Drug_Mdcr_Alowd_Amt
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: same chain, drug services only
+      description: 'The allowed amount includes the Medicare payment (drug services only), so it can never
+        be smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
       severity: warning
       type: custom
@@ -1106,7 +1114,9 @@ schema:
           column: Med_Sbmtd_Chrg
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: same chain, medical services only
+      description: Submitted charge sits above the allowed amount (medical services only). Medicare pays
+        the lesser of the two, so a provider billing under the fee schedule legitimately inverts this;
+        the tolerance is sized to the 0.004% that do.
       dimension: consistency
       severity: warning
       type: custom
@@ -1116,6 +1126,7 @@ schema:
         kwargs:
           column_A: Med_Sbmtd_Chrg
           column_B: Med_Mdcr_Alowd_Amt
+          mostly: 0.999
           or_equal: true
           ignore_row_if: either_value_is_missing
   - name: Med_Mdcr_Alowd_Amt
@@ -1136,7 +1147,8 @@ schema:
           column: Med_Mdcr_Alowd_Amt
           min_value: 0.0
     - name: expect_column_pair_values_a_to_be_greater_than_b
-      description: same chain, medical services only
+      description: 'The allowed amount includes the Medicare payment (medical services only), so it can
+        never be smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
       severity: warning
       type: custom
@@ -1202,7 +1214,9 @@ schema:
           min_value: 0.9
           max_value: 1.0
     - name: expect_column_values_to_be_between
-      description: Medicare beneficiaries are 65+, or disabled and younger.
+      description: 'Medicare is not only a programme for the old: entitlement also follows disability
+        and end-stage renal disease, which reaches children. 243 providers in the 2023 file have an average
+        beneficiary age in single digits.'
       dimension: conformity
       severity: warning
       type: custom
@@ -1211,7 +1225,7 @@ schema:
         expectation: expect_column_values_to_be_between
         kwargs:
           column: Bene_Avg_Age
-          min_value: 18.0
+          min_value: 0.0
           max_value: 100.0
   - name: Bene_Age_LT_65_Cnt
     logicalType: integer

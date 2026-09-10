@@ -116,7 +116,16 @@ def spark_batch(context):
         fields.append(StructField(column, spark_type, nullable=True))
 
     dataframe = spark.read.csv(
-        str(DATA_FILE), header=True, schema=StructType(fields), mode="PERMISSIVE"
+        str(DATA_FILE),
+        header=True,
+        schema=StructType(fields),
+        mode="PERMISSIVE",
+        # HCPCS_Desc and Rndrng_Prvdr_RUCA_Desc are long quoted free text that
+        # can contain newlines; without multiLine the reader tears those
+        # records apart and shifts the columns after them. See validate_spark.py.
+        multiLine=True,
+        quote='"',
+        escape='"',
     )
 
     try:
