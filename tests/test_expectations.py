@@ -13,6 +13,7 @@ can prove three things in seconds, before the 500MB dataset is even fetched:
 Run with:  pytest tests/ -v
 """
 
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -705,38 +706,56 @@ def test_npi_luhn_rule_is_in_the_portable_contract():
 # ── Suite persistence ──────────────────────────────────────────────────────
 
 
-def test_custom_expectations_survive_a_save_and_reload(tmp_path, monkeypatch):
+def test_custom_expectations_survive_a_save_and_reload(tmp_path):
     """CI builds the suites in one process and validates in another.
 
     A custom Expectation is serialised by its registered type name, so if the
     class is not imported before the suite is read back, GX cannot resolve it.
-    This is the regression guard for that.
+
+    Two real subprocesses rather than two calls in this one, for two reasons:
+    it is exactly what CI does, and gx.get_context(mode="file") replaces the
+    global context, which would break the session-scoped fixture the rest of
+    this module shares.
     """
-    monkeypatch.chdir(tmp_path)
+    import json
+    import subprocess
 
-    from pipelines.build_suites import build_mup_provider_suites
-    from pipelines.contract import ADVISORY_SUITE_NAME, PROFILING_SUITE_NAME
+    repo_root = Path(__file__).resolve().parents[1]
 
-    written = build_mup_provider_suites()
-
-    reloaded_context = gx.get_context(mode="file")
-    for name, original in written.items():
-        reloaded = reloaded_context.suites.get(name)
-        assert len(reloaded.expectations) == len(original.expectations), name
-
-    advisory = reloaded_context.suites.get(ADVISORY_SUITE_NAME)
-    npi_rules = [
-        e for e in advisory.expectations
-        if e.configuration.type == "expect_column_values_to_be_valid_npi"
-    ]
-    assert len(npi_rules) == 1
-    assert isinstance(npi_rules[0], ExpectColumnValuesToBeValidNpi)
-
-    profiling = reloaded_context.suites.get(PROFILING_SUITE_NAME)
-    assert all(
-        isinstance(e, ExpectColumnFirstDigitsToFollowBenfordsLaw)
-        for e in profiling.expectations
+    build = subprocess.run(
+        [sys.executable, str(repo_root / "pipelines" / "build_suites.py")],
+        cwd=tmp_path, capture_output=True, text=True,
     )
+    assert build.returncode == 0, build.stderr
+
+    reload_script = """
+import json, sys
+import great_expectations as gx
+import pipelines.expectations  # registration must precede the load
+ctx = gx.get_context(mode="file")
+out = {}
+for name in ["mup_provider_blocking", "mup_provider_advisory", "mup_provider_profiling"]:
+    suite = ctx.suites.get(name)
+    out[name] = [e.configuration.type for e in suite.expectations]
+print(json.dumps(out))
+"""
+    reload = subprocess.run(
+        [sys.executable, "-c", reload_script],
+        cwd=tmp_path, capture_output=True, text=True,
+        env={**os.environ, "PYTHONPATH": str(repo_root)},
+    )
+    assert reload.returncode == 0, reload.stderr
+
+    suites = json.loads(reload.stdout.strip().splitlines()[-1])
+
+    assert len(suites["mup_provider_blocking"]) == len(blocking_expectations())
+    assert len(suites["mup_provider_advisory"]) == len(advisory_expectations())
+    assert len(suites["mup_provider_profiling"]) == len(profiling_expectations())
+
+    assert "expect_column_values_to_be_valid_npi" in suites["mup_provider_advisory"]
+    assert set(suites["mup_provider_profiling"]) == {
+        "expect_column_first_digits_to_follow_benfords_law"
+    }
 
 
 # ── Datasource configuration ───────────────────────────────────────────────
@@ -844,3 +863,184 @@ def test_odcs_marks_npi_as_the_primary_key():
     assert properties["Rndrng_NPI"]["primaryKey"] is True
     assert properties["Rndrng_NPI"]["required"] is True
     assert properties["Rndrng_NPI"]["physicalType"] == "text"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# The by-Provider-and-Service contract
+# ══════════════════════════════════════════════════════════════════════════
+
+from pipelines import contract_service as cs  # noqa: E402
+
+
+@pytest.fixture
+def valid_service_df() -> pd.DataFrame:
+    """A frame at the provider-service grain that satisfies every rule.
+
+    Bigger than the by-provider fixture on purpose: the HCPCS cardinality
+    rule wants to see a thousand distinct procedure codes, which is a real
+    property of this extract and not something 62 rows can demonstrate.
+    """
+    n = 1_200
+    return pd.DataFrame(
+        {
+            "Rndrng_NPI": [complete_npi(f"1{i:08d}") for i in range(n)],
+            "Rndrng_Prvdr_Last_Org_Name": [f"Provider{i}" for i in range(n)],
+            "Rndrng_Prvdr_First_Name": [f"First{i}" for i in range(n)],
+            "Rndrng_Prvdr_MI": ["B"] * n,
+            "Rndrng_Prvdr_Crdntls": ["M.D."] * n,
+            "Rndrng_Prvdr_Ent_Cd": [ENTITY_CODES[i % 2] for i in range(n)],
+            "Rndrng_Prvdr_St1": ["6410 Rockledge Dr"] * n,
+            "Rndrng_Prvdr_St2": ["Ste 304"] * n,
+            "Rndrng_Prvdr_City": [f"City{i}" for i in range(n)],
+            "Rndrng_Prvdr_State_Abrvtn": [VALID_STATES[i % len(VALID_STATES)] for i in range(n)],
+            "Rndrng_Prvdr_State_FIPS": ["24"] * n,
+            "Rndrng_Prvdr_Zip5": ["20817"] * n,
+            "Rndrng_Prvdr_RUCA": ["1"] * n,
+            "Rndrng_Prvdr_RUCA_Desc": ["Metropolitan area core"] * n,
+            "Rndrng_Prvdr_Cntry": ["US"] * n,
+            "Rndrng_Prvdr_Type": [f"Specialty {i}" for i in range(n)],
+            "Rndrng_Prvdr_Mdcr_Prtcptg_Ind": ["Y"] * n,
+            # Distinct codes so the cardinality rule has something to count,
+            # and valid five-character HCPCS shapes.
+            "HCPCS_Cd": [f"9{i:04d}" for i in range(n)],  # 5 chars, all distinct
+            "HCPCS_Desc": ["Initial hospital care"] * n,
+            "HCPCS_Drug_Ind": ["N"] * n,
+            "Place_Of_Srvc": [cs.PLACE_OF_SERVICE_CODES[i % 2] for i in range(n)],
+            "Tot_Benes": [12] * n,
+            "Tot_Srvcs": [40.0] * n,
+            "Tot_Bene_Day_Srvcs": [20] * n,
+            "Avg_Sbmtd_Chrg": [250.22] * n,
+            "Avg_Mdcr_Alowd_Amt": [89.06] * n,
+            "Avg_Mdcr_Pymt_Amt": [60.31] * n,
+            "Avg_Mdcr_Stdzd_Amt": [54.66] * n,
+        }
+    )[cs.ALL_COLUMNS]
+
+
+def test_service_schema_is_the_verified_28_columns():
+    assert len(cs.ALL_COLUMNS) == 28
+    assert len(set(cs.ALL_COLUMNS)) == 28
+
+
+def test_service_types_partition_the_schema():
+    string_cols, float_cols, int_cols = (
+        set(cs.STRING_COLUMNS), set(cs.FLOAT_COLUMNS), set(cs.INTEGER_COLUMNS)
+    )
+    assert string_cols | float_cols | int_cols == set(cs.ALL_COLUMNS)
+    assert not (string_cols & float_cols or string_cols & int_cols or float_cols & int_cols)
+
+
+def test_service_grain_is_a_compound_key():
+    compound = [
+        e for e in cs.mup_service_expectations()
+        if isinstance(e, gxe.ExpectCompoundColumnsToBeUnique)
+    ]
+    assert len(compound) == 1
+    assert compound[0].column_list == cs.GRAIN_COLUMNS
+
+
+def test_service_contract_does_not_assert_npi_is_unique():
+    """The by-provider rule would be wrong here.
+
+    A provider legitimately appears once per HCPCS code per place of service,
+    so a single-column uniqueness rule on NPI would fail on correct data.
+    This is the mistake copying the other contract would produce.
+    """
+    assert not any(
+        isinstance(e, gxe.ExpectColumnValuesToBeUnique)
+        for e in cs.mup_service_expectations()
+    )
+
+
+def test_service_asserts_the_cms_suppression_floor():
+    """CMS drops records covering 10 or fewer beneficiaries from this file."""
+    floors = [
+        e for e in cs.mup_service_expectations()
+        if isinstance(e, gxe.ExpectColumnValuesToBeBetween) and e.column == "Tot_Benes"
+    ]
+    assert len(floors) == 1
+    assert floors[0].min_value == cs.MIN_BENEFICIARIES == 11
+
+
+def test_service_asserts_the_payment_chain():
+    pairs = {
+        (e.column_A, e.column_B)
+        for e in cs.mup_service_expectations()
+        if isinstance(e, gxe.ExpectColumnPairValuesAToBeGreaterThanB)
+    }
+    assert ("Avg_Sbmtd_Chrg", "Avg_Mdcr_Alowd_Amt") in pairs
+    assert ("Avg_Mdcr_Alowd_Amt", "Avg_Mdcr_Pymt_Amt") in pairs
+
+
+def test_service_rules_all_declare_severity_and_rationale():
+    for e in cs.mup_service_expectations():
+        meta = e.meta or {}
+        assert meta.get("severity") in (BLOCKING, ADVISORY)
+        assert meta.get("rationale")
+
+
+def test_clean_service_batch_passes_both_tiers(context, batch_definition, valid_service_df):
+    result = validate(
+        context,
+        batch_definition,
+        valid_service_df,
+        without_volume_rule(cs.mup_service_expectations()),
+    )
+    assert result.success, f"unexpected failures: {failed(result)}"
+
+
+def _service_repeated_grain(df):
+    """Same provider, same code, same setting twice — a real duplicate."""
+    for column in cs.GRAIN_COLUMNS:
+        df.loc[1, column] = df.loc[0, column]
+    return df
+
+
+def _service_payment_exceeds_allowed(df):
+    df.loc[0, "Avg_Mdcr_Pymt_Amt"] = df.loc[0, "Avg_Mdcr_Alowd_Amt"] * 5
+    return df
+
+
+def _service_below_suppression_floor(df):
+    df.loc[0, "Tot_Benes"] = 3
+    return df
+
+
+def _service_bad_hcpcs(df):
+    df.loc[0, "HCPCS_Cd"] = "99"
+    return df
+
+
+def _service_bad_place_of_service(df):
+    df.loc[0, "Place_Of_Srvc"] = "Z"
+    return df
+
+
+@pytest.mark.parametrize(
+    "corrupt, expected_failure",
+    [
+        (_service_repeated_grain,
+         ("expect_compound_columns_to_be_unique", None)),
+        (_service_payment_exceeds_allowed,
+         ("expect_column_pair_values_a_to_be_greater_than_b", "Avg_Mdcr_Alowd_Amt")),
+        (_service_below_suppression_floor,
+         ("expect_column_values_to_be_between", "Tot_Benes")),
+        (_service_bad_hcpcs,
+         ("expect_column_values_to_match_regex", "HCPCS_Cd")),
+        (_service_bad_place_of_service,
+         ("expect_column_values_to_be_in_set", "Place_Of_Srvc")),
+    ],
+    ids=["duplicate_grain", "payment_exceeds_allowed", "below_suppression_floor",
+         "malformed_hcpcs", "unknown_place_of_service"],
+)
+def test_service_contract_rejects_bad_data(
+    context, batch_definition, valid_service_df, corrupt, expected_failure
+):
+    result = validate(
+        context,
+        batch_definition,
+        corrupt(valid_service_df),
+        without_volume_rule(cs.mup_service_expectations()),
+    )
+    assert not result.success
+    assert expected_failure in failed(result)

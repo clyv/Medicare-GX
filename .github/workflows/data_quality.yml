@@ -146,8 +146,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     # Publish the report even when the contract broke — a failing run is
-    # exactly the one worth reading.
-    if: always() && github.ref == 'refs/heads/main'
+    # exactly the one worth reading. But only when validate actually ran to
+    # the point of uploading the artifact: a cancelled or skipped run has
+    # nothing to deploy, and always() on its own would still try.
+    if: >-
+      always()
+      && github.ref == 'refs/heads/main'
+      && contains(fromJSON('["success", "failure"]'), needs.validate.result)
 
     permissions:
       pages: write

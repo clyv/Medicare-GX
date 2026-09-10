@@ -2,8 +2,13 @@
 download_data.py
 Pulls CMS Medicare Physician & Other Practitioners (MUP) — 2023 service year.
 Most recent public release (Dec 2025). Source: data.cms.gov
+
+    python pipelines/download_data.py                    # by-provider (default)
+    python pipelines/download_data.py --dataset service  # by-provider-and-service
+    python pipelines/download_data.py --dataset all
 """
 
+import argparse
 import sys
 
 import requests
@@ -14,14 +19,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 RAW_DIR = Path("data/raw")
-RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 DATASETS = {
-    "mup_phy_r25_p05_v20_d23_prov": {
+    "provider": {
+        "filename": "mup_phy_r25_p05_v20_d23_prov.csv",
         "url": "https://data.cms.gov/sites/default/files/2025-04/22edfd1e-d17a-4478-ad6b-92cac2a5a3c4/MUP_PHY_R25_P05_V20_D23_Prov.csv",
-        "description": "MUP by Provider — 2023 service year (released Dec 2025)",
+        "description": "MUP by Provider — 2023 service year (~1.26M rows, ~500MB)",
+    },
+    "service": {
+        "filename": "mup_phy_r25_p05_v20_d23_prov_svc.csv",
+        "url": "https://data.cms.gov/sites/default/files/2025-04/e3f823f8-db5b-4cc7-ba04-e7ae92b99757/MUP_PHY_R25_P05_V20_D23_Prov_Svc.csv",
+        "description": "MUP by Provider and Service — 2023 service year (~10M rows, ~2GB)",
     },
 }
+
+
+def dataset_path(name: str) -> Path:
+    return RAW_DIR / DATASETS[name]["filename"]
 
 
 def download_file(url: str, dest: Path, description: str) -> None:
@@ -44,14 +58,27 @@ def download_file(url: str, dest: Path, description: str) -> None:
     print(f"  ✓ Saved to {dest}\n")
 
 
-def main():
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--dataset",
+        choices=[*DATASETS, "all"],
+        default="provider",
+        help="which CMS extract to pull (default: provider)",
+    )
+    args = parser.parse_args()
+
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+    wanted = list(DATASETS) if args.dataset == "all" else [args.dataset]
+
     print("=" * 60)
     print("CMS Medicare MUP 2023 — Data Download")
     print("=" * 60 + "\n")
 
-    for name, meta in DATASETS.items():
-        dest = RAW_DIR / f"{name}.csv"
-        download_file(meta["url"], dest, meta["description"])
+    for name in wanted:
+        meta = DATASETS[name]
+        download_file(meta["url"], dataset_path(name), meta["description"])
 
     print("\nDone. Check data/raw/")
 

@@ -29,7 +29,10 @@ from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pipelines.contract import FLOAT_COLUMNS, INTEGER_COLUMNS, STRING_COLUMNS  # noqa: E402
+import argparse  # noqa: E402
+
+from pipelines import contract, contract_service  # noqa: E402
+from pipelines.download_data import dataset_path  # noqa: E402
 
 load_dotenv()
 
@@ -37,8 +40,23 @@ CONN = os.getenv(
     "POSTGRES_CONN",
     "postgresql+psycopg2://gx_user:gx_password@localhost:5432/medicare_db",
 )
-DATA_FILE = Path("data/raw/mup_phy_r25_p05_v20_d23_prov.csv")
-TABLE_NAME = "mup_provider"
+
+# Each extract brings its own column types, so the DDL is built from the
+# contract that describes it rather than from a single hard-coded schema.
+DATASETS = {
+    "provider": {
+        "table": "mup_provider",
+        "types": (contract.STRING_COLUMNS, contract.FLOAT_COLUMNS, contract.INTEGER_COLUMNS),
+    },
+    "service": {
+        "table": "mup_provider_service",
+        "types": (
+            contract_service.STRING_COLUMNS,
+            contract_service.FLOAT_COLUMNS,
+            contract_service.INTEGER_COLUMNS,
+        ),
+    },
+}
 
 
 def read_header(path: Path) -> list:
@@ -48,11 +66,9 @@ def read_header(path: Path) -> list:
         return next(csv.reader(handle))
 
 
-def column_ddl(header: list) -> str:
+def column_ddl(header: list, types) -> str:
     """Type each column from the contract; anything unrecognised lands as TEXT."""
-    string_cols, float_cols, int_cols = (
-        set(STRING_COLUMNS), set(FLOAT_COLUMNS), set(INTEGER_COLUMNS)
-    )
+    string_cols, float_cols, int_cols = (set(t) for t in types)
 
     definitions, unknown = [], []
     for column in header:
@@ -96,32 +112,36 @@ class _ProgressFile:
         return line
 
 
-def load() -> int:
+def load(dataset: str = "provider") -> int:
+    spec = DATASETS[dataset]
+    data_file = dataset_path(dataset)
+    table_name = spec["table"]
+
     engine = create_engine(CONN)
 
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     print("[INFO] Postgres connection OK.")
 
-    header = read_header(DATA_FILE)
-    print(f"[INFO] {len(header)} columns in {DATA_FILE.name}.")
+    header = read_header(data_file)
+    print(f"[INFO] {len(header)} columns in {data_file.name}.")
 
     with engine.connect() as conn:
-        conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
-        conn.execute(text(f"CREATE TABLE {TABLE_NAME} ({column_ddl(header)})"))
+        conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+        conn.execute(text(f"CREATE TABLE {table_name} ({column_ddl(header, spec['types'])})"))
         conn.commit()
-    print(f"[INFO] Created '{TABLE_NAME}' with an explicit schema.")
+    print(f"[INFO] Created '{table_name}' with an explicit schema.")
 
-    total_bytes = DATA_FILE.stat().st_size
+    total_bytes = data_file.stat().st_size
     copy_sql = (
-        f"COPY {TABLE_NAME} FROM STDIN WITH (FORMAT csv, HEADER true)"
+        f"COPY {table_name} FROM STDIN WITH (FORMAT csv, HEADER true)"
     )
 
-    print(f"\n[LOAD] COPY {DATA_FILE.name} -> {TABLE_NAME}")
+    print(f"\n[LOAD] COPY {data_file.name} -> {table_name}")
     raw = engine.raw_connection()
     try:
         with raw.cursor() as cursor, open(
-            DATA_FILE, "r", encoding="utf-8-sig", newline=""
+            data_file, "r", encoding="utf-8-sig", newline=""
         ) as handle, tqdm(
             total=total_bytes, unit="B", unit_scale=True, unit_divisor=1024,
             desc="copied",
@@ -134,18 +154,25 @@ def load() -> int:
         raw.close()
 
     with engine.connect() as conn:
-        total_rows = conn.execute(text(f"SELECT count(*) FROM {TABLE_NAME}")).scalar()
+        total_rows = conn.execute(text(f"SELECT count(*) FROM {table_name}")).scalar()
+        # Index names are schema-scoped in Postgres, so this has to carry the
+        # table name — a shared "idx_npi" would silently no-op on the second
+        # table and leave it unindexed.
+        index_name = f"idx_{table_name}_npi"
         conn.execute(
-            text(f'CREATE INDEX IF NOT EXISTS idx_npi ON {TABLE_NAME} ("Rndrng_NPI")')
+            text(f'CREATE INDEX IF NOT EXISTS {index_name} ON {table_name} ("Rndrng_NPI")')
         )
         conn.commit()
 
-    print(f"\n[DONE] Loaded {total_rows:,} rows into '{TABLE_NAME}'.")
-    print("[INDEX] Created index on Rndrng_NPI.")
+    print(f"\n[DONE] Loaded {total_rows:,} rows into '{table_name}'.")
+    print(f"[INDEX] Created {index_name} on Rndrng_NPI.")
     return total_rows
 
 
 if __name__ == "__main__":
     # the arrow in the progress output would blow up a cp1252 Windows console
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    load()
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dataset", choices=list(DATASETS), default="provider")
+    load(parser.parse_args().dataset)

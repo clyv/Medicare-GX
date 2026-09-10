@@ -131,6 +131,26 @@ Pandas only — extracting a leading significant digit from an arbitrary float i
 
 ---
 
+## A second dataset, at a different grain
+
+`pipelines/contract_service.py` brings the **by-Provider-and-Service** extract under contract: ~10M rows, one row per provider per HCPCS code per place of service, against the by-provider file's 1.26M.
+
+The interesting part is what changes with the grain:
+
+- **Uniqueness becomes a compound key.** `Rndrng_NPI` alone is unique in the by-provider file. Copying that rule here would fail on correct data, because a provider legitimately appears once per procedure code per setting. The rule is `ExpectCompoundColumnsToBeUnique` over NPI + HCPCS + place of service — and there is a test asserting the single-column rule is *absent*, because that is the mistake copying the other contract would produce.
+- **The suppression rule is different.** For the by-provider file CMS redacts small cells. For this one it drops the row: services covering 10 or fewer beneficiaries are excluded outright. So `Tot_Benes >= 11` is a property of how the file is published, not a plausibility guess.
+- **Pandas is not offered.** 10M rows across 28 columns, one of them a long free-text HCPCS description, runs to several gigabytes before validation starts. Postgres and Spark are the engines built for it — which is the argument for a portable contract in the first place.
+
+Its column names were read off the live file rather than inferred, using the schema probe:
+
+```bash
+python pipelines/probe_schema.py <csv-url> --rows 2
+```
+
+This runs on its own monthly schedule (`data_quality_service.yml`), not on push — a code change to the main contract does not need a 2GB download to re-run.
+
+---
+
 ## Open Data Contract Standard
 
 `contracts/mup_provider.odcs.yaml` publishes the contract in the Linux Foundation / [Bitol](https://bitol.io/) ODCS v3.2 format — readable by a catalogue, a consumer, or another team's tooling that has never heard of Great Expectations.
