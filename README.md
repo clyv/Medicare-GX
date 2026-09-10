@@ -85,11 +85,15 @@ Every rule carries a severity, a quality dimension and a rationale, and all thre
 
 | Suite | Rules | Behaviour |
 |---|---|---|
-| `mup_provider_blocking` | 27 | Fails the build |
-| `mup_provider_advisory` | 85 | Evaluated and published; never fails the build |
+| `mup_provider_blocking` | 96 | Fails the build |
+| `mup_provider_advisory` | 16 | Evaluated and published; never fails the build |
 | `mup_provider_profiling` | 3 | Pandas-only screening; never fails the build |
 
-The blocking tier is exactly the set of rules that have passed real CI runs against live CMS data. **New rules land as advisory and are promoted only once a live run shows they hold**, so a threshold inferred from a data dictionary can never turn `main` red. Promotion is a one-line change in `contract.py`.
+**New rules land as advisory and are promoted only once a live run shows they hold**, so a threshold inferred from a data dictionary can never turn `main` red.
+
+That promotion has now happened once, and the split it produced is the interesting part. The contract started with 27 blocking rules. After a tri-backend run agreed **85/85 on the advisory tier across Pandas, PostgreSQL and Spark**, everything *definitional* or drawn from *documented CMS methodology* was promoted — arithmetic identities, sign constraints, the 75 top-code, the suppression markers, the NPI check digit, the schema lock.
+
+What stayed advisory is everything calibrated from a single year's measurements: proportion bounds, cardinality bounds, and two `mostly` tolerances. Those could legitimately shift with next year's release, and a contract should not block on a number nobody derived. A test enforces the distinction.
 
 ### Coverage
 

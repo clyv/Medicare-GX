@@ -259,7 +259,7 @@ def _schema_rules() -> list:
             column_set=ALL_COLUMNS,
             exact_match=True,
             meta=_meta(
-                ADVISORY, SCHEMA,
+                BLOCKING, SCHEMA,
                 "Catches upstream column additions and removals that per-column "
                 "existence checks cannot see.",
             ),
@@ -328,7 +328,7 @@ def _validity_rules() -> list:
         # Stricter than the length check: 10 characters that are all digits.
         gxe.ExpectColumnValuesToMatchRegex(
             column="Rndrng_NPI", regex=NPI_REGEX,
-            meta=_meta(ADVISORY, VALIDITY, "Length alone would accept 10 letters."),
+            meta=_meta(BLOCKING, VALIDITY, "Length alone would accept 10 letters."),
         ),
         # Ten digits is necessary but not sufficient: an NPI carries a Luhn
         # check digit over the 80840 prefix, so '1234567890' is well formed
@@ -336,18 +336,18 @@ def _validity_rules() -> list:
         ExpectColumnValuesToBeValidNpi(
             column="Rndrng_NPI",
             meta=_meta(
-                ADVISORY, VALIDITY,
+                BLOCKING, VALIDITY,
                 "NPI check digit, per the Luhn formula CMS specifies over the "
                 "80840 prefix. No format rule can catch a bad check digit.",
             ),
         ),
         gxe.ExpectColumnValuesToBeInSet(
             column="Rndrng_Prvdr_Ent_Cd", value_set=ENTITY_CODES,
-            meta=_meta(ADVISORY, VALIDITY, "I = individual practitioner, O = organisation."),
+            meta=_meta(BLOCKING, VALIDITY, "I = individual practitioner, O = organisation."),
         ),
         gxe.ExpectColumnValuesToBeInSet(
             column="Rndrng_Prvdr_Mdcr_Prtcptg_Ind", value_set=PARTICIPATION_INDICATORS,
-            meta=_meta(ADVISORY, VALIDITY, "Medicare participation is a Y/N flag."),
+            meta=_meta(BLOCKING, VALIDITY, "Medicare participation is a Y/N flag."),
         ),
     ]
 
@@ -358,7 +358,7 @@ def _validity_rules() -> list:
             gxe.ExpectColumnValuesToBeInSet(
                 column=col, value_set=SUPPRESSION_INDICATORS,
                 meta=_meta(
-                    ADVISORY, VALIDITY,
+                    BLOCKING, VALIDITY,
                     "'*' = suppressed for fewer than 11 beneficiaries; "
                     "'#' = counter-suppressed to prevent recalculation.",
                 ),
@@ -371,7 +371,7 @@ def _validity_rules() -> list:
             gxe.ExpectColumnValuesToBeBetween(
                 column=col, min_value=0, max_value=CHRONIC_CONDITION_MAX,
                 meta=_meta(
-                    ADVISORY, VALIDITY,
+                    BLOCKING, VALIDITY,
                     f"Percentage top-coded at {CHRONIC_CONDITION_MAX} for beneficiary privacy.",
                 ),
             )
@@ -425,13 +425,13 @@ def _range_rules() -> list:
             rules.append(
                 gxe.ExpectColumnValuesToBeBetween(
                     column=f"{prefix}_{suffix}", min_value=0, max_value=None,
-                    meta=_meta(ADVISORY, VALIDITY, "Money paid or charged is never negative."),
+                    meta=_meta(BLOCKING, VALIDITY, "Money paid or charged is never negative."),
                 )
             )
         rules.append(
             gxe.ExpectColumnValuesToBeBetween(
                 column=f"{prefix}_Tot_Srvcs", min_value=0, max_value=None,
-                meta=_meta(ADVISORY, VALIDITY, "Service counts are never negative."),
+                meta=_meta(BLOCKING, VALIDITY, "Service counts are never negative."),
             )
         )
 
@@ -439,7 +439,7 @@ def _range_rules() -> list:
         rules.append(
             gxe.ExpectColumnValuesToBeBetween(
                 column=col, min_value=0, max_value=None,
-                meta=_meta(ADVISORY, VALIDITY, "Beneficiary counts are never negative."),
+                meta=_meta(BLOCKING, VALIDITY, "Beneficiary counts are never negative."),
             )
         )
     return rules
@@ -507,7 +507,7 @@ def _consistency_rules() -> list:
                 or_equal=True,
                 ignore_row_if="either_value_is_missing",
                 meta=_meta(
-                    ADVISORY, CONSISTENCY,
+                    BLOCKING, CONSISTENCY,
                     f"The allowed amount includes the Medicare payment ({scope}), "
                     "so it can never be smaller. No tolerance: this is an "
                     "identity, not a convention.",
@@ -535,7 +535,7 @@ def _consistency_rules() -> list:
                 or_equal=True,
                 ignore_row_if="either_value_is_missing",
                 meta=_meta(
-                    ADVISORY, CONSISTENCY,
+                    BLOCKING, CONSISTENCY,
                     f"{part} is the drug or medical share of {total}, so it cannot exceed it.",
                 ),
             )

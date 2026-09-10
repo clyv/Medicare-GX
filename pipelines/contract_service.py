@@ -142,7 +142,7 @@ def mup_service_expectations() -> list:
             column_set=ALL_COLUMNS,
             exact_match=True,
             meta=_meta(
-                ADVISORY, SCHEMA,
+                BLOCKING, SCHEMA,
                 "Full 28-column lock, read off the live file with probe_schema.py.",
             ),
         )
@@ -173,14 +173,14 @@ def mup_service_expectations() -> list:
     rules.append(
         ExpectColumnValuesToBeValidNpi(
             column="Rndrng_NPI",
-            meta=_meta(ADVISORY, VALIDITY, "NPI check digit, per the CMS Luhn specification."),
+            meta=_meta(BLOCKING, VALIDITY, "NPI check digit, per the CMS Luhn specification."),
         )
     )
     rules.append(
         gxe.ExpectColumnValuesToMatchRegex(
             column="HCPCS_Cd", regex=HCPCS_REGEX,
             meta=_meta(
-                ADVISORY, VALIDITY,
+                BLOCKING, VALIDITY,
                 "HCPCS is five characters: CPT is five digits, Level II is a "
                 "letter followed by four digits.",
             ),
@@ -189,25 +189,25 @@ def mup_service_expectations() -> list:
     rules.append(
         gxe.ExpectColumnValuesToBeInSet(
             column="Place_Of_Srvc", value_set=PLACE_OF_SERVICE_CODES,
-            meta=_meta(ADVISORY, VALIDITY, "F = facility, O = office / non-facility."),
+            meta=_meta(BLOCKING, VALIDITY, "F = facility, O = office / non-facility."),
         )
     )
     rules.append(
         gxe.ExpectColumnValuesToBeInSet(
             column="HCPCS_Drug_Ind", value_set=DRUG_INDICATORS,
-            meta=_meta(ADVISORY, VALIDITY, "Y when the code is on the Part B drug ASP file."),
+            meta=_meta(BLOCKING, VALIDITY, "Y when the code is on the Part B drug ASP file."),
         )
     )
     rules.append(
         gxe.ExpectColumnValuesToBeInSet(
             column="Rndrng_Prvdr_Ent_Cd", value_set=ENTITY_CODES,
-            meta=_meta(ADVISORY, VALIDITY, "I = individual practitioner, O = organisation."),
+            meta=_meta(BLOCKING, VALIDITY, "I = individual practitioner, O = organisation."),
         )
     )
     rules.append(
         gxe.ExpectColumnValuesToBeInSet(
             column="Rndrng_Prvdr_Mdcr_Prtcptg_Ind", value_set=PARTICIPATION_INDICATORS,
-            meta=_meta(ADVISORY, VALIDITY, "Medicare participation is a Y/N flag."),
+            meta=_meta(BLOCKING, VALIDITY, "Medicare participation is a Y/N flag."),
         )
     )
 
@@ -232,7 +232,7 @@ def mup_service_expectations() -> list:
         gxe.ExpectColumnValuesToBeBetween(
             column="Tot_Benes", min_value=MIN_BENEFICIARIES, max_value=None,
             meta=_meta(
-                ADVISORY, VALIDITY,
+                BLOCKING, VALIDITY,
                 f"CMS excludes records covering fewer than {MIN_BENEFICIARIES} "
                 "beneficiaries from this file, so none should appear.",
             ),
@@ -241,7 +241,7 @@ def mup_service_expectations() -> list:
     rules.append(
         gxe.ExpectColumnValuesToBeBetween(
             column="Tot_Bene_Day_Srvcs", min_value=1, max_value=None,
-            meta=_meta(ADVISORY, VALIDITY, "Beneficiary-day services are counted, so at least one."),
+            meta=_meta(BLOCKING, VALIDITY, "Beneficiary-day services are counted, so at least one."),
         )
     )
 
@@ -265,12 +265,16 @@ def mup_service_expectations() -> list:
          "every row."),
     ]:
         kwargs = {"mostly": mostly} if mostly is not None else {}
+        # A rule with no tolerance is an identity that held on every one of
+        # 9.66M rows, so it blocks. One carrying a tolerance was calibrated
+        # from a single year and stays advisory.
+        severity = ADVISORY if mostly is not None else BLOCKING
         rules.append(
             gxe.ExpectColumnPairValuesAToBeGreaterThanB(
                 column_A=column_a, column_B=column_b,
                 or_equal=True,
                 ignore_row_if="either_value_is_missing",
-                meta=_meta(ADVISORY, CONSISTENCY, why),
+                meta=_meta(severity, CONSISTENCY, why),
                 **kwargs,
             )
         )
@@ -283,7 +287,7 @@ def mup_service_expectations() -> list:
         gxe.ExpectCompoundColumnsToBeUnique(
             column_list=GRAIN_COLUMNS,
             meta=_meta(
-                ADVISORY, UNIQUENESS,
+                BLOCKING, UNIQUENESS,
                 "One row per provider, per HCPCS code, per place of service.",
             ),
         )

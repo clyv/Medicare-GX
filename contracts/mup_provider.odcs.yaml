@@ -52,7 +52,7 @@ schema:
     description: Catches upstream column additions and removals that per-column existence checks cannot
       see.
     dimension: conformity
-    severity: warning
+    severity: error
     type: custom
     engine: greatExpectations
     implementation:
@@ -198,7 +198,7 @@ schema:
     - name: expect_column_values_to_match_regex
       description: Length alone would accept 10 letters.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -210,7 +210,7 @@ schema:
       description: NPI check digit, per the Luhn formula CMS specifies over the 80840 prefix. No format
         rule can catch a bad check digit.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -287,7 +287,7 @@ schema:
     - name: expect_column_values_to_be_in_set
       description: I = individual practitioner, O = organisation.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -503,7 +503,7 @@ schema:
     - name: expect_column_values_to_be_in_set
       description: Medicare participation is a Y/N flag.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -523,7 +523,7 @@ schema:
       description: Drug_Tot_HCPCS_Cds is the drug or medical share of Tot_HCPCS_Cds, so it cannot exceed
         it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -537,7 +537,7 @@ schema:
       description: Med_Tot_HCPCS_Cds is the drug or medical share of Tot_HCPCS_Cds, so it cannot exceed
         it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -577,7 +577,7 @@ schema:
     - name: expect_column_pair_values_a_to_be_greater_than_b
       description: Drug_Tot_Benes is the drug or medical share of Tot_Benes, so it cannot exceed it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -590,7 +590,7 @@ schema:
     - name: expect_column_pair_values_a_to_be_greater_than_b
       description: Med_Tot_Benes is the drug or medical share of Tot_Benes, so it cannot exceed it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -637,7 +637,7 @@ schema:
     - name: expect_column_pair_values_a_to_be_greater_than_b
       description: Drug_Tot_Srvcs is the drug or medical share of Tot_Srvcs, so it cannot exceed it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -650,7 +650,7 @@ schema:
     - name: expect_column_pair_values_a_to_be_greater_than_b
       description: Med_Tot_Srvcs is the drug or medical share of Tot_Srvcs, so it cannot exceed it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -720,7 +720,7 @@ schema:
       description: Drug_Sbmtd_Chrg is the drug or medical share of Tot_Sbmtd_Chrg, so it cannot exceed
         it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -734,7 +734,7 @@ schema:
       description: Med_Sbmtd_Chrg is the drug or medical share of Tot_Sbmtd_Chrg, so it cannot exceed
         it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -785,7 +785,7 @@ schema:
       description: 'The allowed amount includes the Medicare payment (all services), so it can never be
         smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -843,7 +843,7 @@ schema:
       description: Drug_Mdcr_Pymt_Amt is the drug or medical share of Tot_Mdcr_Pymt_Amt, so it cannot
         exceed it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -857,7 +857,7 @@ schema:
       description: Med_Mdcr_Pymt_Amt is the drug or medical share of Tot_Mdcr_Pymt_Amt, so it cannot exceed
         it.
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -914,7 +914,7 @@ schema:
       description: '''*'' = suppressed for fewer than 11 beneficiaries; ''#'' = counter-suppressed to
         prevent recalculation.'
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -943,7 +943,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Service counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -960,7 +960,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -993,7 +993,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1005,7 +1005,7 @@ schema:
       description: 'The allowed amount includes the Medicare payment (drug services only), so it can never
         be smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1024,7 +1024,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1041,7 +1041,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1059,7 +1059,7 @@ schema:
       description: '''*'' = suppressed for fewer than 11 beneficiaries; ''#'' = counter-suppressed to
         prevent recalculation.'
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1088,7 +1088,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Service counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1105,7 +1105,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1138,7 +1138,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1150,7 +1150,7 @@ schema:
       description: 'The allowed amount includes the Medicare payment (medical services only), so it can
         never be smaller. No tolerance: this is an identity, not a convention.'
       dimension: consistency
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1169,7 +1169,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1186,7 +1186,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Money paid or charged is never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1236,7 +1236,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1253,7 +1253,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1270,7 +1270,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1287,7 +1287,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1317,7 +1317,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1347,7 +1347,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1364,7 +1364,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1381,7 +1381,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1398,7 +1398,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1415,7 +1415,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1432,7 +1432,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1449,7 +1449,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1479,7 +1479,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1509,7 +1509,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Beneficiary counts are never negative.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1526,7 +1526,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1544,7 +1544,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1562,7 +1562,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1580,7 +1580,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1598,7 +1598,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1616,7 +1616,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1634,7 +1634,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1652,7 +1652,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1670,7 +1670,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1688,7 +1688,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1706,7 +1706,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1724,7 +1724,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1742,7 +1742,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1760,7 +1760,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1778,7 +1778,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1796,7 +1796,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1814,7 +1814,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1832,7 +1832,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1850,7 +1850,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1868,7 +1868,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1886,7 +1886,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1904,7 +1904,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1922,7 +1922,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1940,7 +1940,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:
@@ -1958,7 +1958,7 @@ schema:
     - name: expect_column_values_to_be_between
       description: Percentage top-coded at 75 for beneficiary privacy.
       dimension: conformity
-      severity: warning
+      severity: error
       type: custom
       engine: greatExpectations
       implementation:

@@ -236,12 +236,53 @@ def test_tiers_partition_the_contract():
 
 
 def test_blocking_tier_holds_only_rules_proven_on_live_data():
-    """The blocking tier is the 27 rules that have passed real CI runs.
+    """The blocking tier holds rules a real run has shown to hold.
 
-    New rules land as advisory and are promoted only after a real run shows
-    they hold, so a speculative threshold can never turn main red.
+    It started at 27. After the first tri-backend run agreed 85/85 on the
+    advisory tier across Pandas, PostgreSQL and Spark, the rules that are
+    *definitional* or come from *documented CMS methodology* were promoted:
+    arithmetic identities, sign constraints, the 75 top-code, suppression
+    markers, the NPI check digit, the schema lock.
+
+    What stayed advisory is everything calibrated from a single year's
+    measurements — proportion bounds, cardinality bounds, and the two
+    `mostly` tolerances. Those could legitimately shift with next year's
+    release, and a contract should not block on a number nobody derived.
     """
-    assert len(blocking_expectations()) == 27
+    assert len(blocking_expectations()) == 96
+
+
+def test_advisory_tier_holds_only_calibrated_rules():
+    """Nothing definitional should be left sitting in advisory."""
+    calibrated_types = {
+        "expect_column_proportion_of_non_null_values_to_be_between",
+        "expect_column_proportion_of_unique_values_to_be_between",
+        "expect_column_unique_value_count_to_be_between",
+        "expect_table_column_count_to_be_between",
+        "expect_column_values_to_be_between",
+        "expect_column_pair_values_a_to_be_greater_than_b",
+    }
+    for e in advisory_expectations():
+        assert e.configuration.type in calibrated_types, (
+            f"{e.configuration.type} looks definitional; promote it or explain why not"
+        )
+
+
+def test_only_the_convention_half_of_the_chain_is_advisory():
+    """allowed >= payment blocks; submitted >= allowed does not."""
+    advisory_pairs = {
+        (e.column_A, e.column_B)
+        for e in advisory_expectations()
+        if isinstance(e, gxe.ExpectColumnPairValuesAToBeGreaterThanB)
+    }
+    blocking_pairs = {
+        (e.column_A, e.column_B)
+        for e in blocking_expectations()
+        if isinstance(e, gxe.ExpectColumnPairValuesAToBeGreaterThanB)
+    }
+    for prefix in ["Tot", "Drug", "Med"]:
+        assert (f"{prefix}_Sbmtd_Chrg", f"{prefix}_Mdcr_Alowd_Amt") in advisory_pairs
+        assert (f"{prefix}_Mdcr_Alowd_Amt", f"{prefix}_Mdcr_Pymt_Amt") in blocking_pairs
 
 
 def test_every_required_column_has_an_existence_check():
@@ -558,7 +599,7 @@ def test_unexpected_new_column_is_caught(context, batch_definition, valid_df):
     df = valid_df.copy()
     df["Some_New_CMS_Column"] = 1
     result = validate(
-        context, batch_definition, df, without_volume_rule(advisory_expectations())
+        context, batch_definition, df, without_volume_rule(blocking_expectations())
     )
     assert not result.success
     assert ("expect_table_columns_to_match_set", None) in failed(result)
@@ -752,7 +793,7 @@ print(json.dumps(out))
     assert len(suites["mup_provider_advisory"]) == len(advisory_expectations())
     assert len(suites["mup_provider_profiling"]) == len(profiling_expectations())
 
-    assert "expect_column_values_to_be_valid_npi" in suites["mup_provider_advisory"]
+    assert "expect_column_values_to_be_valid_npi" in suites["mup_provider_blocking"]
     assert set(suites["mup_provider_profiling"]) == {
         "expect_column_first_digits_to_follow_benfords_law"
     }
