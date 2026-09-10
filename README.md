@@ -2,7 +2,7 @@
 
 One data contract, enforced across **three execution environments** — Pandas, PostgreSQL and Spark — on the **CMS Medicare Physician & Other Practitioners 2023** dataset, using [Great Expectations 1.19.1](https://greatexpectations.io/).
 
-> "I enforced a single data contract across Pandas, PostgreSQL and Spark on 1.26M Medicare provider records — published as an Open Data Contract Standard document, wired into CI so broken data fails the build."
+> "I enforced a single data contract across Pandas, PostgreSQL and Spark on 11M rows of Medicare claims data — 96 rules that fail the build, published as an Open Data Contract Standard document."
 
 📊 **[Browse the live Data Docs →](https://clyv.github.io/Medicare-GX/)** — regenerated on every run.
 
@@ -20,7 +20,7 @@ One data contract, enforced across **three execution environments** — Pandas, 
 | Cross-column integrity | Payment-chain and part-of-total rules a per-column check cannot see |
 | Contract testing | pytest proves the contract catches the violations it claims to |
 | CI/CD integration | GitHub Actions fails the build on broken data, publishes Data Docs to Pages |
-| Real-world scale | CMS MUP 2023, 1.26M provider records |
+| Real-world scale | CMS MUP 2023 — 1.26M provider rows, plus a 9.66M-row extract at a finer grain |
 
 ---
 
@@ -43,7 +43,9 @@ Two CMS privacy rules shape the contract, and both are asserted rather than work
 ```
 Medicare-GX/
 ├── .github/workflows/
-│   └── data_quality.yml       # CI — contract tests, tri-backend validation, Pages
+│   ├── data_quality.yml          # CI — contract tests, tri-backend validation, Pages
+│   ├── data_quality_service.yml  # the 9.66M-row extract, monthly
+│   └── schema_probe.yml          # on-demand header probe for a new extract
 ├── contracts/
 │   └── mup_provider.odcs.yaml # published contract, generated from contract.py
 ├── data/raw/                  # downloaded CMS CSVs (gitignored)
@@ -54,17 +56,20 @@ Medicare-GX/
 │   └── 01_exploration.ipynb   # EDA — schema profiling, null audit, contract derivation
 ├── pipelines/
 │   ├── contract.py            # THE CONTRACT — pure data, no context, no I/O
+│   ├── contract_service.py    # second contract, at the provider-service grain
 │   ├── expectations/
 │   │   ├── npi.py             # custom: NPI Luhn check digit
 │   │   └── benford.py         # custom: Benford's Law screening
-│   ├── validation.py          # tiered runner shared by all three backends
+│   ├── validation.py          # tiered runner shared by all backends
 │   ├── export_odcs.py         # contract.py -> ODCS YAML
+│   ├── probe_schema.py        # read a remote CSV header before writing rules
 │   ├── download_data.py
 │   ├── build_suites.py
 │   ├── load_to_postgres.py    # COPY FROM STDIN, explicit DDL
 │   ├── validate_pandas.py
 │   ├── validate_postgres.py
-│   └── validate_spark.py
+│   ├── validate_spark.py
+│   └── validate_service.py    # the 9.66M-row extract, Postgres + Spark
 ├── tests/
 │   └── test_expectations.py   # contract shape, behaviour, seeded violations
 ├── docker-compose.yml
@@ -270,7 +275,7 @@ The workflow also runs weekly, so upstream data drift surfaces without a push.
 - **GitHub Actions** — CI/CD and Pages
 - **Python 3.12**
 
-> **Great Expectations is pinned to `1.19.1`.** Release 1.20.0 introduced `_build_duplicate_rows_source`, which regressed `expect_column_values_to_be_unique` on SQLAlchemy backends with mixed-case column names — `KeyError: 'Rndrng_NPI'`. The file is byte-identical in 1.21.0 and 1.22.0, so the bug is still live upstream. Details and a minimal reproduction: [`docs/gx-1.20-uniqueness-regression.md`](docs/gx-1.20-uniqueness-regression.md).
+> **Great Expectations is pinned to `1.19.1`.** Release 1.20.0 introduced `_build_duplicate_rows_source`, which regressed `expect_column_values_to_be_unique` on SQLAlchemy backends with mixed-case column names — `KeyError: 'Rndrng_NPI'`. The file is byte-identical in 1.21.0 and 1.22.0, so the bug is still live upstream. Reported upstream as [fivetran/great_expectations#12179](https://github.com/fivetran/great_expectations/issues/12179); reproduction and root-cause diff in [`docs/gx-1.20-uniqueness-regression.md`](docs/gx-1.20-uniqueness-regression.md).
 
 ---
 

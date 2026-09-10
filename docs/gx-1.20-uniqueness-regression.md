@@ -1,16 +1,18 @@
-# Upstream bug report — draft
+# GX 1.20.0 uniqueness regression
 
-Ready to file at <https://github.com/great-expectations/great_expectations/issues>.
-Post it from your own account; nothing here needs editing except the tone if
-you want it shorter.
+**Filed upstream:** [fivetran/great_expectations#12179](https://github.com/fivetran/great_expectations/issues/12179)
+(opened 2026-09-10, still open at time of writing)
 
-A search of the tracker on 2026-09-09 turned up no existing report.
+This is the write-up behind that report: the reproduction, the root-cause
+diff, and why the pin in `requirements.txt` cannot be lifted yet.
+
+**Re-check before unpinning.** The bug is live in 1.20.0, 1.21.0 and 1.22.0 —
+`column_values_unique.py` is byte-identical across all three. If the issue is
+closed, diff that file against 1.19.1 before changing the pin.
 
 ---
 
-**Title:** `expect_column_values_to_be_unique` raises `KeyError` on SQLAlchemy backends with mixed-case column names (regression in 1.20.0)
-
----
+## Report
 
 ### Summary
 
