@@ -35,7 +35,12 @@ from pipelines.contract_service import (  # noqa: E402
     blocking_expectations,
 )
 from pipelines.download_data import dataset_path  # noqa: E402
-from pipelines.validation import ADVISORY, BLOCKING, run_tiered_validation  # noqa: E402
+from pipelines.validation import (  # noqa: E402
+    ADVISORY,
+    BLOCKING,
+    read_csv_header,
+    run_tiered_validation,
+)
 
 load_dotenv()
 
@@ -103,8 +108,11 @@ def spark_batch(context):
     string_cols, float_cols = set(STRING_COLUMNS), set(FLOAT_COLUMNS)
     integer_cols = set(INTEGER_COLUMNS)
 
+    # Ordered by the file's own header: Spark binds an explicit schema by
+    # position, so following the contract's list instead would silently
+    # relabel every column past any divergence. See validate_spark.py.
     fields = []
-    for column in ALL_COLUMNS:
+    for column in read_csv_header(DATA_FILE):
         if column in string_cols:
             spark_type = StringType()
         elif column in float_cols:
@@ -112,7 +120,7 @@ def spark_batch(context):
         elif column in integer_cols:
             spark_type = LongType()
         else:
-            raise ValueError(f"no declared type for {column}")
+            spark_type = StringType()
         fields.append(StructField(column, spark_type, nullable=True))
 
     dataframe = spark.read.csv(

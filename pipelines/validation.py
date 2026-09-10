@@ -49,6 +49,19 @@ PORTABLE_TIERS = ((BLOCKING, BLOCKING_SUITE_NAME), (ADVISORY, ADVISORY_SUITE_NAM
 PANDAS_TIERS = PORTABLE_TIERS + ((PROFILING, PROFILING_SUITE_NAME),)
 
 
+def read_csv_header(path) -> list:
+    """The column names as the file actually orders them.
+
+    Spark binds an explicit schema by position, so the schema has to follow
+    the file rather than whatever order the contract happens to list columns
+    in. Reading the header is cheap and removes the assumption entirely.
+    """
+    import csv
+
+    with open(path, "r", encoding="utf-8-sig", newline="") as handle:
+        return next(csv.reader(handle))
+
+
 def _actions(tier: str) -> list:
     """Alert on a broken contract, when a webhook is configured.
 

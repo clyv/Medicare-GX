@@ -1044,3 +1044,90 @@ def test_service_contract_rejects_bad_data(
     )
     assert not result.success
     assert expected_failure in failed(result)
+
+
+def test_hcpcs_regex_accepts_trailing_letter_codes():
+    """The letter in a HCPCS code is not always leading.
+
+    CPT Category II/III codes and the COVID-19 vaccine administration codes
+    (0124A, 0121A, 0134A) put it last. A pattern demanding digits in
+    positions 2-5 rejected 43,537 real 2023 rows on the first run.
+    """
+    import re
+
+    pattern = re.compile(cs.HCPCS_REGEX)
+    for code in ["99213", "0124A", "0121A", "0134A", "J1885", "G0008", "0509T"]:
+        assert pattern.match(code), code
+    for code in ["99", "992134", "", "9921-", "ABCDEF"]:
+        assert not pattern.match(code), code
+
+
+def test_service_charge_chain_splits_identity_from_convention():
+    """allowed >= payment carries no tolerance; submitted >= allowed does.
+
+    Both were measured on the live 9.66M-row file: the identity held on every
+    row, the convention inverted on 0.07%.
+    """
+    by_pair = {
+        (e.column_A, e.column_B): e.mostly
+        for e in cs.mup_service_expectations()
+        if isinstance(e, gxe.ExpectColumnPairValuesAToBeGreaterThanB)
+    }
+    assert by_pair[("Avg_Mdcr_Alowd_Amt", "Avg_Mdcr_Pymt_Amt")] == 1.0
+    assert by_pair[("Tot_Bene_Day_Srvcs", "Tot_Benes")] == 1.0
+    assert by_pair[("Avg_Sbmtd_Chrg", "Avg_Mdcr_Alowd_Amt")] == cs.CHARGE_CHAIN_MOSTLY
+    assert by_pair[("Tot_Srvcs", "Tot_Bene_Day_Srvcs")] == cs.SERVICE_COUNT_MOSTLY
+
+
+def test_provider_charge_chain_splits_identity_from_convention():
+    """Same split on the by-provider contract, same evidence."""
+    from pipelines.contract import CHARGE_CHAIN_MOSTLY
+
+    by_pair = {
+        (e.column_A, e.column_B): e.mostly
+        for e in mup_provider_expectations()
+        if isinstance(e, gxe.ExpectColumnPairValuesAToBeGreaterThanB)
+    }
+    for prefix in ["Tot", "Drug", "Med"]:
+        allowed = f"{prefix}_Mdcr_Alowd_Amt"
+        payment = f"{prefix}_Mdcr_Pymt_Amt"
+        charge = f"{prefix}_Sbmtd_Chrg"
+        assert by_pair[(allowed, payment)] == 1.0, f"{prefix}: identity must be strict"
+        assert by_pair[(charge, allowed)] == CHARGE_CHAIN_MOSTLY, f"{prefix}: needs headroom"
+
+
+# ── Physical column order ──────────────────────────────────────────────────
+
+
+def test_risk_score_is_the_last_column_not_the_last_demographic():
+    """Verified against the live CSV with probe_schema.py.
+
+    Bene_Avg_Risk_Scre sits at position 81, after the 25 chronic condition
+    columns — not at the end of the demographic block where it reads
+    naturally. Pandas and Postgres bind by header name and never noticed;
+    Spark binds an explicit schema by position and silently relabelled every
+    column from 56 onwards.
+    """
+    assert ALL_COLUMNS[-1] == "Bene_Avg_Risk_Scre"
+    assert ALL_COLUMNS.index("Bene_Avg_Risk_Scre") == 80
+    assert ALL_COLUMNS[55] == "Bene_CC_BH_ADHD_OthCD_V1_Pct"
+
+
+def test_column_order_covers_exactly_the_semantic_groups():
+    """ALL_COLUMNS is ordered by the file; the groups are ordered by meaning.
+
+    They must hold the same names even though they do not hold them in the
+    same order.
+    """
+    from pipelines.contract import (
+        BENEFICIARY_COLUMNS,
+        IDENTITY_COLUMNS,
+        MEASURE_COLUMNS,
+    )
+
+    grouped = set(
+        IDENTITY_COLUMNS + MEASURE_COLUMNS + BENEFICIARY_COLUMNS
+        + CHRONIC_CONDITION_COLUMNS
+    )
+    assert grouped == set(ALL_COLUMNS)
+    assert len(ALL_COLUMNS) == 81

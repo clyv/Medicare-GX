@@ -55,19 +55,24 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Free up disk space
+        # The runner ships with ~14GB free; a 2GB CSV plus its Postgres copy
+        # plus Spark's scratch space is uncomfortably close to that.
+        #
+        # Runs BEFORE setup-java, and does not touch $AGENT_TOOLSDIRECTORY.
+        # That directory is where setup-java installs the JDK, so clearing it
+        # afterwards deleted the runtime and Spark died with
+        # JAVA_GATEWAY_EXITED on the first run of this workflow.
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/android
+          df -h /
+
       - name: Set up Java 17
         uses: actions/setup-java@v4.7.1
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Free up disk space
-        # The runner ships with ~14GB free; a 2GB CSV plus its Postgres copy
-        # plus Spark's scratch space is uncomfortably close to that.
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          df -h /
 
       - name: Install dependencies
         run: |

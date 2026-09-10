@@ -30,7 +30,7 @@ from pipelines.contract import (  # noqa: E402
     INTEGER_COLUMNS,
     STRING_COLUMNS,
 )
-from pipelines.validation import run_tiered_validation  # noqa: E402
+from pipelines.validation import read_csv_header, run_tiered_validation  # noqa: E402
 
 load_dotenv()
 
@@ -40,8 +40,16 @@ ASSET_NAME = "mup_provider_spark"
 PREFIX = "mup_spark"
 
 
-def build_schema():
-    """An explicit Spark schema, ordered as the CSV is, typed as the contract says."""
+def build_schema(header=None):
+    """An explicit Spark schema, ordered as the CSV is, typed as the contract says.
+
+    Ordered by the file's own header rather than by the contract's column
+    list. Spark binds an explicit schema *by position*, so if the two orders
+    ever diverge every column past the first mismatch is silently relabelled
+    — which is precisely the bug the first tri-backend run surfaced, when
+    Bene_Avg_Risk_Scre turned out to be the last column in the file rather
+    than the last of the demographic block.
+    """
     from pyspark.sql.types import (
         DoubleType,
         LongType,
@@ -50,20 +58,28 @@ def build_schema():
         StructType,
     )
 
+    if header is None:
+        header = read_csv_header(DATA_FILE)
+
+    unexpected = set(header) - set(ALL_COLUMNS)
+    if unexpected:
+        print(f"[WARN] {len(unexpected)} column(s) not in the contract: {sorted(unexpected)[:5]}")
+
     string_cols = set(STRING_COLUMNS)
     float_cols = set(FLOAT_COLUMNS)
     integer_cols = set(INTEGER_COLUMNS)
 
     fields = []
-    for column in ALL_COLUMNS:
+    for column in header:
         if column in string_cols:
             spark_type = StringType()
         elif column in float_cols:
             spark_type = DoubleType()
         elif column in integer_cols:
             spark_type = LongType()
-        else:  # unreachable while the type lists partition ALL_COLUMNS
-            raise ValueError(f"no declared type for {column}")
+        else:
+            # Unknown to the contract: read it as text rather than guess.
+            spark_type = StringType()
         fields.append(StructField(column, spark_type, nullable=True))
 
     return StructType(fields)

@@ -114,7 +114,6 @@ schema:
         - Bene_Race_Othr_Cnt
         - Bene_Dual_Cnt
         - Bene_Ndual_Cnt
-        - Bene_Avg_Risk_Scre
         - Bene_CC_BH_ADHD_OthCD_V1_Pct
         - Bene_CC_BH_Alcohol_Drug_V1_Pct
         - Bene_CC_BH_Tobacco_V1_Pct
@@ -140,6 +139,7 @@ schema:
         - Bene_CC_PH_Parkinson_V2_Pct
         - Bene_CC_PH_Arthritis_V2_Pct
         - Bene_CC_PH_Stroke_TIA_V2_Pct
+        - Bene_Avg_Risk_Scre
   - name: expect_table_column_count_to_be_between
     description: Coarse guard on schema drift between CMS releases.
     dimension: conformity
@@ -1517,37 +1517,6 @@ schema:
         kwargs:
           column: Bene_Ndual_Cnt
           min_value: 0.0
-  - name: Bene_Avg_Risk_Scre
-    logicalType: number
-    physicalType: double precision
-    required: false
-    primaryKey: false
-    quality:
-    - name: expect_column_proportion_of_non_null_values_to_be_between
-      description: Populated for 90%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
-        rule.
-      dimension: completeness
-      severity: warning
-      type: custom
-      engine: greatExpectations
-      implementation:
-        expectation: expect_column_proportion_of_non_null_values_to_be_between
-        kwargs:
-          column: Bene_Avg_Risk_Scre
-          min_value: 0.9
-          max_value: 1.0
-    - name: expect_column_values_to_be_between
-      description: HCC risk score; 1.0 is an average beneficiary.
-      dimension: conformity
-      severity: warning
-      type: custom
-      engine: greatExpectations
-      implementation:
-        expectation: expect_column_values_to_be_between
-        kwargs:
-          column: Bene_Avg_Risk_Scre
-          min_value: 0.0
-          max_value: 30.0
   - name: Bene_CC_BH_ADHD_OthCD_V1_Pct
     logicalType: integer
     physicalType: bigint
@@ -1998,6 +1967,37 @@ schema:
           column: Bene_CC_PH_Stroke_TIA_V2_Pct
           min_value: 0.0
           max_value: 75.0
+  - name: Bene_Avg_Risk_Scre
+    logicalType: number
+    physicalType: double precision
+    required: false
+    primaryKey: false
+    quality:
+    - name: expect_column_proportion_of_non_null_values_to_be_between
+      description: Populated for 90%-100% of providers; the rest are redacted under the fewer-than-11-beneficiaries
+        rule.
+      dimension: completeness
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_proportion_of_non_null_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Risk_Scre
+          min_value: 0.9
+          max_value: 1.0
+    - name: expect_column_values_to_be_between
+      description: HCC risk score; 1.0 is an average beneficiary.
+      dimension: conformity
+      severity: warning
+      type: custom
+      engine: greatExpectations
+      implementation:
+        expectation: expect_column_values_to_be_between
+        kwargs:
+          column: Bene_Avg_Risk_Scre
+          min_value: 0.0
+          max_value: 30.0
 slaProperties:
 - property: frequency
   value: 1

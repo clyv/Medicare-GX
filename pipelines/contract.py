@@ -142,9 +142,21 @@ CHRONIC_CONDITION_COLUMNS = [
     "Bene_CC_PH_Stroke_TIA_V2_Pct",
 ]
 
+# The physical column order of the file, verified against the live CSV with
+# probe_schema.py. This is NOT the concatenation of the groups above:
+# Bene_Avg_Risk_Scre is the last column in the file, after the 25 chronic
+# condition columns, not the last of the demographic block.
+#
+# The distinction is not cosmetic. Pandas and Postgres bind columns by header
+# name and do not care. Spark, handed an explicit schema, binds them by
+# position — so a list in the wrong order silently relabels every column past
+# the first mistake. The first tri-backend run caught exactly that.
 ALL_COLUMNS = (
-    IDENTITY_COLUMNS + MEASURE_COLUMNS + BENEFICIARY_COLUMNS
+    IDENTITY_COLUMNS
+    + MEASURE_COLUMNS
+    + [c for c in BENEFICIARY_COLUMNS if c != "Bene_Avg_Risk_Scre"]
     + CHRONIC_CONDITION_COLUMNS
+    + ["Bene_Avg_Risk_Scre"]
 )
 
 

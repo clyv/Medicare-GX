@@ -103,9 +103,20 @@ INTEGER_COLUMNS = [
 # CMS excludes any record covering 10 or fewer beneficiaries from this file.
 MIN_BENEFICIARIES = 11
 
-# HCPCS: five characters. Level I (CPT) is five digits; Level II is a letter
-# followed by four digits.
-HCPCS_REGEX = r"^[A-Za-z0-9][0-9]{4}$"
+# HCPCS is five alphanumeric characters. The letter is not always leading:
+# CPT Category II and III codes, and the COVID-19 vaccine administration
+# codes (0124A, 0121A, 0134A), put it last. A regex demanding digits in
+# positions 2-5 rejects 43,537 real 2023 rows.
+HCPCS_REGEX = r"^[A-Za-z0-9]{5}$"
+
+# Submitted charge can fall below the allowed amount — Medicare pays the
+# lesser of the two. 6,573 rows in 9.66M, or 0.07%.
+CHARGE_CHAIN_MOSTLY = 0.999
+
+# Tot_Srvcs is a service *count* and can be fractional, because drug units
+# are. So it can dip below the beneficiary-day count it usually exceeds.
+# 151 rows in 9.66M, or 0.0016%.
+SERVICE_COUNT_MOSTLY = 0.999
 
 # F = facility, O = office / non-facility.
 PLACE_OF_SERVICE_CODES = ["F", "O"]
@@ -235,22 +246,32 @@ def mup_service_expectations() -> list:
     )
 
     # ── Consistency ────────────────────────────────────────────────────────
-    for column_a, column_b, why in [
-        ("Avg_Sbmtd_Chrg", "Avg_Mdcr_Alowd_Amt",
-         "Submitted charge is never below the allowed amount."),
-        ("Avg_Mdcr_Alowd_Amt", "Avg_Mdcr_Pymt_Amt",
-         "The allowed amount includes the Medicare payment, so it is never smaller."),
-        ("Tot_Srvcs", "Tot_Bene_Day_Srvcs",
-         "A beneficiary-day can carry several services, never fewer than one."),
-        ("Tot_Bene_Day_Srvcs", "Tot_Benes",
-         "Each beneficiary accounts for at least one beneficiary-day."),
+    # Same split as the by-provider contract, and the 2023 data agrees on both
+    # files: the identity holds exactly, the convention needs headroom.
+    for column_a, column_b, mostly, why in [
+        ("Avg_Sbmtd_Chrg", "Avg_Mdcr_Alowd_Amt", CHARGE_CHAIN_MOSTLY,
+         "Submitted charge sits above the allowed amount. Medicare pays the "
+         "lesser of the two, so a provider billing under the fee schedule "
+         "inverts it; 0.07% of 2023 rows do."),
+        ("Avg_Mdcr_Alowd_Amt", "Avg_Mdcr_Pymt_Amt", None,
+         "The allowed amount includes the Medicare payment, so it can never be "
+         "smaller. No tolerance: this is an identity, and it held on every one "
+         "of 9.66M rows."),
+        ("Tot_Srvcs", "Tot_Bene_Day_Srvcs", SERVICE_COUNT_MOSTLY,
+         "A beneficiary-day usually carries at least one service, but service "
+         "counts are fractional for drug units, so a few rows dip below."),
+        ("Tot_Bene_Day_Srvcs", "Tot_Benes", None,
+         "Each beneficiary accounts for at least one beneficiary-day. Held on "
+         "every row."),
     ]:
+        kwargs = {"mostly": mostly} if mostly is not None else {}
         rules.append(
             gxe.ExpectColumnPairValuesAToBeGreaterThanB(
                 column_A=column_a, column_B=column_b,
                 or_equal=True,
                 ignore_row_if="either_value_is_missing",
                 meta=_meta(ADVISORY, CONSISTENCY, why),
+                **kwargs,
             )
         )
 
